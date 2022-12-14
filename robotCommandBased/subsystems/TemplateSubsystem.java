@@ -6,7 +6,9 @@ import edu.wpi.first.wpilibj2.command.RunCommand;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.WaitCommand;
 
-public class TemplateSubsystem  extends SubsystemBase {
+import static frc.robot.Constants.*; // example
+
+public class TemplateSubsystem  extends SubsystemBase implements SubsystemTeam{
 
   public TemplateSubsystem(XboxController driverController) // pass in all the stuff this class needs from above
     {
@@ -16,6 +18,19 @@ public class TemplateSubsystem  extends SubsystemBase {
 
       new DefaultCommand(); // instantiate TemplateSubsystem's (optional) default command
     }
+   
+  @Override
+  public void readPeriodicInputs()
+    {
+        // populate each input variable
+        mPeriodicIO.dummy = System.currentTimeMillis(); // example
+    }
+
+  @Override
+  public void writePeriodicOutputs()
+  {
+    //System.out.println("write outputs TemplateSubsystem");
+  }
   
   @Override
   public void periodic() {

@@ -19,7 +19,7 @@ import com.ctre.phoenix.motorcontrol.can.TalonFX;
 import com.ctre.phoenix.motorcontrol.can.TalonFXConfiguration;
 import com.ctre.phoenix.sensors.SensorVelocityMeasPeriod;
 
-public class FlywheelSubsystem extends SubsystemBase {
+public class FlywheelSubsystem extends SubsystemBase implements SubsystemTeam {
   static
   {
       System.out.println("Loading: " + MethodHandles.lookup().lookupClass().getCanonicalName());
@@ -34,9 +34,20 @@ public class FlywheelSubsystem extends SubsystemBase {
   }
 
   @Override
+  public void readPeriodicInputs()
+  {
+      // populate each input variable
+      mPeriodicIO.velocity = getFlywheelSpeed.get();
+  }
+
+  public void writePeriodicOutputs()
+  {
+    //System.out.println("write outputs FlywheelSubsystem");
+  }
+  
+   @Override
   public void periodic() {
   // This method will be called once per scheduler run
-        mPeriodicIO.velocity = getFlywheelSpeed.get();
   System.out.println("flywheel " + mPeriodicIO.velocity + " RPM"); // example
   }
 

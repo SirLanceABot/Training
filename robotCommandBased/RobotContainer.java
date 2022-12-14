@@ -9,9 +9,6 @@ import edu.wpi.first.wpilibj.shuffleboard.EventImportance;
 import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
-import edu.wpi.first.wpilibj.DataLogManager;
-import edu.wpi.first.util.datalog.DataLog;
-import edu.wpi.first.util.datalog.StringLogEntry;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
@@ -19,7 +16,6 @@ import edu.wpi.first.wpilibj2.command.RunCommand;
 import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
 import edu.wpi.first.wpilibj2.command.WaitCommand;
 import edu.wpi.first.wpilibj2.command.button.JoystickButton;
-
 import frc.robot.commands.Autonomous1Command;
 import frc.robot.commands.Autonomous2Command;
 import frc.robot.commands.Autonomous3Command;
@@ -30,7 +26,7 @@ import frc.robot.subsystems.DriveSubsystem;
 import frc.robot.subsystems.ExampleSubsystem;
 import frc.robot.subsystems.FanFSMSubsystem;
 import frc.robot.subsystems.FlywheelSubsystem;
-
+import frc.robot.subsystems.SubsystemTeamManagerSubsystem;
 import static frc.robot.Constants.*;
 
 /**
@@ -63,6 +59,8 @@ public class RobotContainer {
   /////////////////////////////////////////
   // SUBSYSTEMS
   /////////////////////////////////////////
+  private final SubsystemTeamManagerSubsystem mSubsystemManager = new SubsystemTeamManagerSubsystem(); // put first
+  
   private final ExampleSubsystem exampleSubsystem;
   private final DriveSubsystem driveSubsystem;
   private final FlywheelSubsystem flywheelSubsystem;
@@ -70,28 +68,18 @@ public class RobotContainer {
 
   private final SendableChooser<Command> autoChooser;
 
-  // WPILog
-  StringLogEntry commandLogEntry;
-
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
   // include the useAutonomous for all the subsystems required by an autonomous command
   public RobotContainer() {
 
-     // DataLog log = new DataLog("/home/lvuser", "MyUStestLog"+System.currentTimeMillis()+".wpilog");
-     DataLogManager.start();
-     DataLog log = DataLogManager.getLog();
-     String name = new String("/Commands/"); // make a prefix tree structure for the data
- 
-     commandLogEntry = new StringLogEntry(log, name+"events", "Event");
-     
     if(!useFullRobot) DriverStation.reportWarning("NOT USING FULL ROBOT", false);
     
-    exampleSubsystem  = (useFullRobot || useExample  ? new ExampleSubsystem()                  : null);
-    driveSubsystem    = (useFullRobot || useDrive    ? new DriveSubsystem(driverController)    : null);
-    flywheelSubsystem = (useFullRobot || useFlywheel ? new FlywheelSubsystem(driverController) : null);
-    fanFSMSubsystem   = (useFullRobot || useFanFSM   ? new FanFSMSubsystem(driverController)   : null);
+    exampleSubsystem  = (useFullRobot || useExample  ? instantiateSubsystem(new ExampleSubsystem())                  : null);
+    driveSubsystem    = (useFullRobot || useDrive    ? instantiateSubsystem(new DriveSubsystem(driverController))    : null);
+    flywheelSubsystem = (useFullRobot || useFlywheel ? instantiateSubsystem(new FlywheelSubsystem(driverController)) : null);
+    fanFSMSubsystem   = (useFullRobot || useFanFSM   ? instantiateSubsystem(new FanFSMSubsystem(driverController))   : null);
 
-    autoChooser       = (useFullRobot                ? new SendableChooser<Command>()          : null);
+    autoChooser       = (useFullRobot                ?                      new SendableChooser<Command>()           : null);
 
     // display all the auto choices on the SmartDashboard
     if(autoChooser != null)
@@ -107,6 +95,18 @@ public class RobotContainer {
 
     // Configure the Driver/Operator Game Controllers buttons' bindings
     configureButtonBindings();
+  }
+
+  /**
+   * Add instantiation of a subsystem to the mass periodic I/O scheme
+   * @param <T> class type of subsystem
+   * @param instantiated subsystem object
+   * @return object then can be assigned to a variable
+   */
+  <T> T instantiateSubsystem(T subsystem)
+  { 
+    mSubsystemManager.addSubsystem(subsystem);
+    return subsystem;
   }
 
   /**
@@ -132,9 +132,9 @@ public class RobotContainer {
 //---------------------------------------------------------------------------------
       autoChooser.addOption("Auto 1",
             new Autonomous1Command(flywheelSubsystem).get());
-      //---------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------
       autoChooser.addOption("Auto 2",
-            new Autonomous2Command(flywheelSubsystem).get());
+            new Autonomous2Command(exampleSubsystem).get());
 //---------------------------------------------------------------------------------
       autoChooser.addOption("Spinup Flywheel to " + Constants.Flywheel.kAutoSPinRPM
                           + " RPM for " + Constants.Flywheel.kAutoTime + " seconds",
@@ -147,7 +147,7 @@ public class RobotContainer {
       autoChooser.addOption("Auto 4",
             new Autonomous4Command(10000).withTimeout(2.5));
 //---------------------------------------------------------------------------------
-      int count = 1000;
+      int count = 2000;
       double timeout = .001;
       autoChooser.addOption("print " + count + " times in " + timeout + " seconds",
             new Autonomous5Command(count, timeout));
@@ -192,49 +192,32 @@ public class RobotContainer {
 
   void configureSchedulerLog()
   {
-    // Set the scheduler to log events for command initialize, interrupt,
+    // Set the scheduler to log Shuffleboard events for command initialize, interrupt,
     // finish, execute
-    // Log to the ShuffleBoard and the WPILib data log tool.
-    // If ShuffleBoard is recording these events are added to the recording. Convert
+    // If ShuffkeBoard is recording these events are added to the recording. Convert
     // recording to csv and they show nicely in Excel. 
-    // If using data log tool, the recording is automatic so run that tool to retrieve and convert the log.
     CommandScheduler.getInstance()
         .onCommandInitialize(
             command ->
-            {
-                commandLogEntry.append(command.getClass() + " " + command.getName() + " initialized");
                 Shuffleboard.addEventMarker(
-                    "Command initialized", command.getName(), EventImportance.kNormal);
-            }
-        );
+                    "Command initialized", command.getName(), EventImportance.kNormal));
     CommandScheduler.getInstance()
         .onCommandInterrupt(
             command ->
-            {
-                commandLogEntry.append(command.getClass() + " " + command.getName() + " interrupted");
                 Shuffleboard.addEventMarker(
-                    "Command interrupted", command.getName(), EventImportance.kNormal);
-            }
-        );
+                    "Command interrupted", command.getName(), EventImportance.kNormal));
     CommandScheduler.getInstance()
         .onCommandFinish(
             command ->
-            {
-                commandLogEntry.append(command.getClass() + " " + command.getName() + " finished");
                 Shuffleboard.addEventMarker(
-                    "Command finished", command.getName(), EventImportance.kNormal);
-            }
-        );
+                    "Command finished", command.getName(), EventImportance.kNormal));
     
     CommandScheduler.getInstance()
         .onCommandExecute( // this can generate a lot of events
             command ->
-            {
-                commandLogEntry.append(command.getClass() + " " + command.getName() + " executed");
                 Shuffleboard.addEventMarker(
-                    "Command executed", command.getName(), EventImportance.kNormal);
-            }
-        );
+                    "Command executed", command.getName(), EventImportance.kNormal));
+
   }
 
   ////////////////////////////////////////////////////////////////////////////////

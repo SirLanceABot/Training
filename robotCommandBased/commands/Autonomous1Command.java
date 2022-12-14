@@ -4,8 +4,6 @@ import java.lang.invoke.MethodHandles;
 
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
-import edu.wpi.first.wpilibj2.command.ParallelRaceGroup;
-import edu.wpi.first.wpilibj2.command.PrintCommand;
 import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
 import edu.wpi.first.wpilibj2.command.WaitCommand;
 
@@ -34,30 +32,12 @@ public class Autonomous1Command extends SequentialCommandGroup
   {
    return new SequentialCommandGroup
         (
-          new SpinupFlywheelCommand( m_flywheelSubsystem, 300. ) .withTimeout(5.)
-
-         ,new InstantCommand( ()->System.out.println("IC 1") )
-
-         ,new WaitCommand(6.)
-         
-         ,new ParallelRaceGroup(
-               testSeqGrpCommand
-              ,new WaitCommand(1.))
-
-          // same as the above ParallelRaceGroup but possibly less obvious   
-          //  ,testSeqGrpCommand
-          //     .raceWith(
-          //   new WaitCommand(5.))
-
-         ,new InstantCommand(() -> System.out.println("IC 2"))
-
-         ,new PrintCommand("testing PrintCommand -  it's really identical to above print command")
-
-         ,new WaitCommand(2.)
-         
-         ,new SpinupFlywheelCommand( m_flywheelSubsystem, 1000. ).withTimeout(6.)
-
-         ,testit.spinAtSpeed(500.) .withTimeout(4.)
+          new SpinupFlywheelCommand( m_flywheelSubsystem, 300. ).withTimeout(10.)
+         ,new InstantCommand(()->System.out.println("IC 1"))
+         ,testSeqGrpCommand.raceWith(new WaitCommand(5.))
+         ,new InstantCommand(()->System.out.println("IC 2"))
+         ,new SpinupFlywheelCommand( m_flywheelSubsystem, 1000. ).withTimeout(8.)
+         ,testit.spinAtSpeed(500.).withTimeout(4.)
         );
   }
 }

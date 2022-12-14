@@ -7,6 +7,7 @@ import edu.wpi.first.wpilibj.livewindow.LiveWindow;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 
+
 /*
 FWIW, a good way to initialize motors is to do this via a state machine,
  one config call per iteration of Periodic(). You can also check to see 
@@ -26,7 +27,7 @@ public class Robot extends TimedRobot {
 
   private Command m_autonomousCommand;
 
-  public RobotContainer m_robotContainer;
+  private RobotContainer m_robotContainer;
 
   Robot()
   {
@@ -84,7 +85,6 @@ public class Robot extends TimedRobot {
       m_autonomousCommand.schedule();
     }
 
-  
   }
 
   @Override
@@ -114,7 +114,7 @@ public class Robot extends TimedRobot {
   @Override
   public void testInit() {
     // Cancels all running commands at the start of test mode.
-    CommandScheduler.getInstance().cancelAll();
+    // CommandScheduler.getInstance().cancelAll();
   }
 
   /** This function is called periodically during test mode. */

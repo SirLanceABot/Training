@@ -4,7 +4,7 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.commands.ExampleCommandBuilder;
 import frc.robot.commands.ExampleSubsystemDefaultCommand;
 
-public class ExampleSubsystem extends SubsystemBase {
+public class ExampleSubsystem extends SubsystemBase implements SubsystemTeam {
   
   /** Creates a new ExampleSubsystem. */
   public ExampleSubsystem()
@@ -26,12 +26,12 @@ public class ExampleSubsystem extends SubsystemBase {
 
   public void readPeriodicInputs()
   {
-    System.out.println("read inputs ExampleSubsystem");
+    //System.out.println("read inputs ExampleSubsystem");
   }
   
   public void writePeriodicOutputs()
 {
-  System.out.println("write outputs ExampleSubsystem");
+  //System.out.println("write outputs ExampleSubsystem");
 }
 
 ////////////////////////////////////////////////////////////////////////////////

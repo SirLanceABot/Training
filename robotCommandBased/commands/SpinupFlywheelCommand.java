@@ -35,7 +35,7 @@ public class SpinupFlywheelCommand extends CommandBase {
     @Override
     public void execute()
       {
-        System.out.println("SpinupFlywheelCommand execute " + m_speed);
+        System.out.println("SpunupFlywheelCommand execute " + m_speed);
         flywheelSubsystem.setFlywheelSpeed.accept(m_speed);
       }
     

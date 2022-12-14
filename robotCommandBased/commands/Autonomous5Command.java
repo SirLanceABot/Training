@@ -30,27 +30,7 @@ public class Autonomous5Command extends SequentialCommandGroup
     this.count = count;
     this.timeout = timeout;
 
-    addCommands( // PART A
-          new InstantCommand
-          //FIXME Instant commands run once to completion so most decorators don't have a chance to work
-          //FIXME and it won't be interrupted.
-          // If you want periodic execution code, then code the whole command with an execute() method
-          // since Runnables only have the run() method (implied).
-          // You have to do your own checking of when to finish.
-          (
-            ()->
-            {
-              var message = "command 5A printing " + count + " times or " + timeout + " seconds which ever expires first";
-              for(int i = 1; i <= count; i++) // bad idea to have long loops
-              {
-                System.out.println(message + " " + i + " " + System.currentTimeMillis());
-              }
-            }
-            /*no other subsystems required to display the message*/
-          ) .withTimeout(timeout) //FIXME worse idea - this timeout does not work on InstantCommands
-    );
-
-    addCommands( // PART B
+    addCommands(
           new InstantCommand
           // Instant commands run once to completion so most decorators don't have a chance to work
           // and it won't be interrupted.
@@ -60,14 +40,14 @@ public class Autonomous5Command extends SequentialCommandGroup
           (
             ()->
             {
-              var message = "command 5B printing " + count + " times or " + timeout + " seconds which ever expires first";
+              var message = "command 5 printing " + count + " times or " + timeout + " seconds which ever expires first";
               for(int i = 1; i <= count; i++) // bad idea to have long loops
               {
                 System.out.println(message + " " + i + " " + System.currentTimeMillis());
               }
             }
             /*no other subsystems required to display the message*/
-          ).withTimeout(timeout) //FIXME worse idea - this timeout does not work on InstantCommands
+          ).withTimeout(timeout) // worse idea - this timeout does not work on InstantCommands
     );
   }
 }

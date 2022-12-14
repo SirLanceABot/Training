@@ -20,7 +20,7 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
 import static frc.robot.Constants.*;
 
-public class DriveSubsystem extends SubsystemBase {
+public class DriveSubsystem extends SubsystemBase implements SubsystemTeam {
   static
   {
       System.out.println("Loading: " + MethodHandles.lookup().lookupClass().getCanonicalName());
@@ -60,7 +60,7 @@ public class DriveSubsystem extends SubsystemBase {
       public double PctOutput;
       public double busVoltage;
       public double voltageCompensation;
-      public double velocity;
+      public double encoder;
       public double driverControllerLeftX;
   }
   /**
@@ -86,18 +86,26 @@ public class DriveSubsystem extends SubsystemBase {
       gyro = new Navx(gyro);      
       
     }
+   
+  @Override
+  public void readPeriodicInputs()
+    {
+      mPeriodicIO.PctOutput = getPctOutput.get();
+      mPeriodicIO.busVoltage = getBusVoltage.get();
+      mPeriodicIO.voltageCompensation = getVoltageCompensation.get();
+      mPeriodicIO.encoder = getVelocity.get();
+      mPeriodicIO.driverControllerLeftX = driverController.getLeftX();
+    }
+
+  public void writePeriodicOutputs()
+  {
+    //System.out.println("write outputs DriveSubsystem");
+  }
   
   @Override
-  public void periodic() {  // This method will be called once per scheduler run
-    // I/O
-    mPeriodicIO.PctOutput = getPctOutput.get();
-    mPeriodicIO.busVoltage = getBusVoltage.get();
-    mPeriodicIO.voltageCompensation = getVoltageCompensation.get();
-    mPeriodicIO.velocity = getVelocity.get();
-    mPeriodicIO.driverControllerLeftX = driverController.getLeftX();
-
-    // other periodic processes
-    System.out.println(mPeriodicIO.velocity + " RPM driving");
+  public void periodic() {
+    // This method will be called once per scheduler run
+    //FIXME System.out.println(mPeriodicIO.encoder + " RPM");
     gyro.displayGyro(); // get the GYRO values
 
     // IF CONFIG MODE DO ONE CONFIG STATEMENT PER CYCLE
@@ -159,20 +167,20 @@ public class DriveSubsystem extends SubsystemBase {
     errors += check(testMotor, "set idle mode", true);
 
     // none of these faster settings seems to work - data still slow to update; don't know why
-    testMotor.setControlFramePeriodMs(10);
+    testMotor.setControlFramePeriodMs(5);
     errors += check(testMotor, "set control frame period", true);
 
-    testMotor.setPeriodicFramePeriod(PeriodicFrame.kStatus0, 10); // 10 put values in Constants
+    testMotor.setPeriodicFramePeriod(PeriodicFrame.kStatus0, 5); // 10 put values in Constants
     errors += check(testMotor, "set status frame 0 period", true);
 
-    testMotor.setPeriodicFramePeriod(PeriodicFrame.kStatus1, 20); // 20
+    testMotor.setPeriodicFramePeriod(PeriodicFrame.kStatus1, 5); // 20
     errors += check(testMotor, "set status frame 1 period", true);
 
-    testMotor.setPeriodicFramePeriod(PeriodicFrame.kStatus2, 20); // 50
+    testMotor.setPeriodicFramePeriod(PeriodicFrame.kStatus2, 5); // 50
     errors += check(testMotor, "set status frame 2 period", true);
 
-    // testMotor.setPeriodicFramePeriod(PeriodicFrame.kStatus3, 5); // not used?
-    // errors += check(testMotor, "set status frame 3 period", true);
+    testMotor.setPeriodicFramePeriod(PeriodicFrame.kStatus3, 5); // not used?
+    errors += check(testMotor, "set status frame 3 period", true);
 
     testMotor.enableVoltageCompensation(VoltageCompensation);
     errors += check(testMotor, "set voltage compensation", true);

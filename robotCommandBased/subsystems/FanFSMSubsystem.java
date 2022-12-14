@@ -14,7 +14,7 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
 import frc.robot.commands.FanFSMCommand;
 
-public class FanFSMSubsystem  extends SubsystemBase {
+public class FanFSMSubsystem  extends SubsystemBase implements SubsystemTeam{
   static
   {
       System.out.println("Loading: " + MethodHandles.lookup().lookupClass().getCanonicalName());
@@ -32,10 +32,8 @@ public class FanFSMSubsystem  extends SubsystemBase {
   @Override
   public void periodic() {
     // This method will be called once per scheduler run without regard to DISABLED or ENABLED
-      fanFSMCommand.checkStateChange();
-      mPeriodicIO.AButtonPressed = driverController.getAButtonPressed();
-      mPeriodicIO.BButtonPressed = driverController.getBButtonPressed();
-      }
+    fanFSMCommand.checkStateChange();
+  }
 
   @Override
   public void simulationPeriodic() {
@@ -48,6 +46,20 @@ public class FanFSMSubsystem  extends SubsystemBase {
   public PeriodicIO mPeriodicIO;
   private XboxController driverController;
   
+  @Override
+  public void readPeriodicInputs()
+    {
+      // populate each input variable (run by SubsystemTeamManagerSubsystem)
+      mPeriodicIO.AButtonPressed = driverController.getAButtonPressed();
+      mPeriodicIO.BButtonPressed = driverController.getBButtonPressed();
+    }
+
+    public void writePeriodicOutputs()
+    {
+      //System.out.println("write outputs FanFSMSubsystem");
+    }
+    
+    
   public class PeriodicIO {
   // INPUTS
     public boolean AButtonPressed;
