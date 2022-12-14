@@ -6,6 +6,7 @@ import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.livewindow.LiveWindow;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
+import frc.robot.subsystems.SubsystemTeam;
 
 /*
 FWIW, a good way to initialize motors is to do this via a state machine,
@@ -64,9 +65,9 @@ class Robot extends TimedRobot {
   @Override
   public void robotPeriodic() 
   {
-    m_robotContainer.readPeriodic();
+    SubsystemTeam.readPeriodic();
     CommandScheduler.getInstance().run();
-    m_robotContainer.writePeriodic();
+    SubsystemTeam.writePeriodic();
   }
 
   /** This function is called once each time the robot enters Disabled mode. */
@@ -74,7 +75,7 @@ class Robot extends TimedRobot {
   public void disabledInit()
   {
     // Cancels all running commands.
-    // CommandScheduler.getInstance().cancelAll(); // be careful - there might be something you want to keep running
+    CommandScheduler.getInstance().cancelAll(); // be careful - there might be something you want to keep running
   }
 
   @Override

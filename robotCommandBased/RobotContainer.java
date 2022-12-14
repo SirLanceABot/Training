@@ -1,7 +1,6 @@
 package frc.robot;
 
 import java.lang.invoke.MethodHandles;
-import java.util.ArrayList;
 
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.PowerDistribution;
@@ -31,7 +30,6 @@ import frc.robot.subsystems.DriveSubsystem;
 import frc.robot.subsystems.ExampleSubsystem;
 import frc.robot.subsystems.FanFSMSubsystem;
 import frc.robot.subsystems.FlywheelSubsystem;
-import frc.robot.subsystems.SubsystemTeam;
 
 import static frc.robot.Constants.*;
 
@@ -61,7 +59,7 @@ class RobotContainer {
   private final boolean useFanFSM           = no;
 
   private final XboxController driverController = new XboxController(driverControllerID);
-  private final ArrayList<SubsystemTeam> m_subsystemArrayList = new ArrayList<SubsystemTeam>();
+  // private final ArrayList<SubsystemTeam> m_subsystemArrayList = new ArrayList<SubsystemTeam>();
 
   /////////////////////////////////////////
   // SUBSYSTEMS
@@ -90,10 +88,10 @@ class RobotContainer {
      
     if(!useFullRobot) DriverStation.reportWarning("NOT USING FULL ROBOT", false);
     
-    exampleSubsystem  = (useFullRobot || useExample  ? instantiateSubsystem(new ExampleSubsystem())                  : null);
-    driveSubsystem    = (useFullRobot || useDrive    ? instantiateSubsystem(new DriveSubsystem(driverController))    : null);
-    flywheelSubsystem = (useFullRobot || useFlywheel ? instantiateSubsystem(new FlywheelSubsystem(driverController)) : null);
-    fanFSMSubsystem   = (useFullRobot || useFanFSM   ? instantiateSubsystem(new FanFSMSubsystem(driverController))   : null);
+    exampleSubsystem  = (useFullRobot || useExample  ? new ExampleSubsystem()                  : null);
+    driveSubsystem    = (useFullRobot || useDrive    ? new DriveSubsystem(driverController)    : null);
+    flywheelSubsystem = (useFullRobot || useFlywheel ? new FlywheelSubsystem(driverController) : null);
+    fanFSMSubsystem   = (useFullRobot || useFanFSM   ? new FanFSMSubsystem(driverController)   : null);
 
     autoChooser       = (useFullRobot                ? new SendableChooser<Command>()          : null);
 
@@ -111,18 +109,6 @@ class RobotContainer {
 
     // Configure the Driver/Operator Game Controllers buttons' bindings
     configureButtonBindings();
-  }
-
-  /**
-   * Add instantiation of a subsystem to the mass periodic I/O scheme
-   * @param <T> class type of subsystem
-   * @param instantiated subsystem object
-   * @return object then can be assigned to a variable
-   */
-  <T> T instantiateSubsystem(T subsystem)
-  { 
-    m_subsystemArrayList.add((SubsystemTeam) subsystem);
-    return subsystem;
   }
 
   /**
@@ -274,16 +260,6 @@ class RobotContainer {
 // the status of a button with all the other PeriodIO values and using that value
 // in the Fan FSM. Those bindings are not established here in RobotContainer.
 //---------------------------------------------------------------------------------
-  }
-
-  void readPeriodic()
-  {
-    m_subsystemArrayList.forEach( SubsystemTeam::readPeriodicInputs );
-  }
-
-  void writePeriodic()
-  {
-    m_subsystemArrayList.forEach( SubsystemTeam::writePeriodicOutputs );
   }
 }
 
