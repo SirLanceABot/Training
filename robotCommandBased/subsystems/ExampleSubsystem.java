@@ -26,12 +26,12 @@ public class ExampleSubsystem extends SubsystemBase implements SubsystemTeam {
 
   public void readPeriodicInputs()
   {
-    //System.out.println("read inputs ExampleSubsystem");
+    System.out.println("read inputs ExampleSubsystem");
   }
   
   public void writePeriodicOutputs()
 {
-  //System.out.println("write outputs ExampleSubsystem");
+  System.out.println("write outputs ExampleSubsystem");
 }
 
 ////////////////////////////////////////////////////////////////////////////////

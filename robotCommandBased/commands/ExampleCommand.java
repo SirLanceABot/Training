@@ -8,17 +8,15 @@ public class ExampleCommand extends CommandBase {
 
   private final ExampleSubsystem m_subsystem;
   private final int m_commandID;
-  private boolean m_runsWhenDisabled;
   private int printCount;
   /**
    * Creates a new ExampleCommand.
    *
    * @param subsystem The subsystem used by this command.
    */
-  public ExampleCommand(ExampleSubsystem subsystem, int commandID, boolean runsWhenDisabled) {
+  public ExampleCommand(ExampleSubsystem subsystem, int commandID) {
     m_subsystem = subsystem;
     m_commandID = commandID;
-    m_runsWhenDisabled = runsWhenDisabled;
 
     // Use addRequirements() here to declare subsystem dependencies.
     addRequirements(m_subsystem);
@@ -31,7 +29,7 @@ public class ExampleCommand extends CommandBase {
   @Override
   public boolean runsWhenDisabled()
   {
-    return m_runsWhenDisabled;
+    return true;
   }
 
   // Called when the command is initially scheduled.

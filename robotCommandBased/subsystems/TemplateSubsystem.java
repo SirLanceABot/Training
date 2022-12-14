@@ -6,8 +6,6 @@ import edu.wpi.first.wpilibj2.command.RunCommand;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.WaitCommand;
 
-import static frc.robot.Constants.*; // example
-
 public class TemplateSubsystem  extends SubsystemBase implements SubsystemTeam{
 
   public TemplateSubsystem(XboxController driverController) // pass in all the stuff this class needs from above

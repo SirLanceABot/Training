@@ -15,7 +15,7 @@ public class TestSeqGrpCommand extends SequentialCommandGroup {
     public TestSeqGrpCommand()
     {
         addCommands(
-            new WaitCommand(9.)
+            new WaitCommand(1.)
            ,new WaitCommand(2.)/*.deadlineWith(new spinupMotor(motorSubsystem, 100.))*/
         );
     }
@@ -108,7 +108,7 @@ public class TestSeqGrpCommand extends SequentialCommandGroup {
 // }
 /*
 
-SequentialCommandGroup
+SequentialCommandGroup
 A SequentialCommandGroup (Java, C++) runs a list of commands in sequence - the first command
  will be executed, then the second, then the third, and so on until the list finishes. The
   sequential group finishes after the last command in the sequence finishes. It is therefore

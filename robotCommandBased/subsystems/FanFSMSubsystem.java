@@ -32,8 +32,8 @@ public class FanFSMSubsystem  extends SubsystemBase implements SubsystemTeam{
   @Override
   public void periodic() {
     // This method will be called once per scheduler run without regard to DISABLED or ENABLED
-    fanFSMCommand.checkStateChange();
-  }
+      fanFSMCommand.checkStateChange();
+      }
 
   @Override
   public void simulationPeriodic() {

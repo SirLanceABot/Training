@@ -60,8 +60,9 @@ public class DriveSubsystem extends SubsystemBase implements SubsystemTeam {
       public double PctOutput;
       public double busVoltage;
       public double voltageCompensation;
-      public double encoder;
+      public double velocity;
       public double driverControllerLeftX;
+      public double encoder;
   }
   /**
    * end define inputs
@@ -86,7 +87,7 @@ public class DriveSubsystem extends SubsystemBase implements SubsystemTeam {
       gyro = new Navx(gyro);      
       
     }
-   
+
   @Override
   public void readPeriodicInputs()
     {
@@ -167,20 +168,20 @@ public class DriveSubsystem extends SubsystemBase implements SubsystemTeam {
     errors += check(testMotor, "set idle mode", true);
 
     // none of these faster settings seems to work - data still slow to update; don't know why
-    testMotor.setControlFramePeriodMs(5);
+    testMotor.setControlFramePeriodMs(10);
     errors += check(testMotor, "set control frame period", true);
 
-    testMotor.setPeriodicFramePeriod(PeriodicFrame.kStatus0, 5); // 10 put values in Constants
+    testMotor.setPeriodicFramePeriod(PeriodicFrame.kStatus0, 10); // 10 put values in Constants
     errors += check(testMotor, "set status frame 0 period", true);
 
-    testMotor.setPeriodicFramePeriod(PeriodicFrame.kStatus1, 5); // 20
+    testMotor.setPeriodicFramePeriod(PeriodicFrame.kStatus1, 20); // 20
     errors += check(testMotor, "set status frame 1 period", true);
 
-    testMotor.setPeriodicFramePeriod(PeriodicFrame.kStatus2, 5); // 50
+    testMotor.setPeriodicFramePeriod(PeriodicFrame.kStatus2, 20); // 50
     errors += check(testMotor, "set status frame 2 period", true);
 
-    testMotor.setPeriodicFramePeriod(PeriodicFrame.kStatus3, 5); // not used?
-    errors += check(testMotor, "set status frame 3 period", true);
+    // testMotor.setPeriodicFramePeriod(PeriodicFrame.kStatus3, 5); // not used?
+    // errors += check(testMotor, "set status frame 3 period", true);
 
     testMotor.enableVoltageCompensation(VoltageCompensation);
     errors += check(testMotor, "set voltage compensation", true);

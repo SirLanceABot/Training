@@ -1,12 +1,13 @@
 package frc.robot;
 
 import java.lang.invoke.MethodHandles;
+import java.util.ArrayList;
 
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.livewindow.LiveWindow;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
-
+import frc.robot.subsystems.SubsystemTeam;
 
 /*
 FWIW, a good way to initialize motors is to do this via a state machine,
@@ -26,8 +27,8 @@ public class Robot extends TimedRobot {
   }
 
   private Command m_autonomousCommand;
-
-  private RobotContainer m_robotContainer;
+  public RobotContainer m_robotContainer;
+  private ArrayList<SubsystemTeam> m_subsystemArrayList = new ArrayList<SubsystemTeam>();
 
   Robot()
   {
@@ -42,7 +43,7 @@ public class Robot extends TimedRobot {
   public void robotInit() {
     // Instantiate our RobotContainer.  This will perform all our button bindings, and put our
     // autonomous chooser on the dashboard.
-    m_robotContainer = new RobotContainer();
+    m_robotContainer = new RobotContainer(m_subsystemArrayList);
   }
 
   /**
@@ -52,15 +53,25 @@ public class Robot extends TimedRobot {
    * <p>This runs after the mode specific periodic functions, but before LiveWindow and
    * SmartDashboard integrated updating.
    */
-  @Override
-  public void robotPeriodic() {
-    // this is run after the other Periodic methods
+  // @Override
+  // public void robotPeriodic() {
+  //   // this is run after the other Periodic methods
 
-    // Runs the Scheduler.  This is responsible for polling buttons, adding newly-scheduled
-    // commands, running already-scheduled commands, removing finished or interrupted commands,
-    // and running subsystem periodic() methods.  This must be called from the robot's periodic
-    // block in order for anything in the Command-based framework to work.
+  //   // Runs the Scheduler.  This is responsible for polling buttons, adding newly-scheduled
+  //   // commands, running already-scheduled commands, removing finished or interrupted commands,
+  //   // and running subsystem periodic() methods.  This must be called from the robot's periodic
+  //   // block in order for anything in the Command-based framework to work.
+  //   CommandScheduler.getInstance().run();
+  // }
+
+  @Override
+  public void robotPeriodic() 
+  {
+    m_subsystemArrayList.forEach( SubsystemTeam::readPeriodicInputs );
+
     CommandScheduler.getInstance().run();
+
+    m_subsystemArrayList.forEach( SubsystemTeam::writePeriodicOutputs );
   }
 
   /** This function is called once each time the robot enters Disabled mode. */
@@ -84,7 +95,6 @@ public class Robot extends TimedRobot {
       System.out.println("scheduling autocommand");
       m_autonomousCommand.schedule();
     }
-
   }
 
   @Override
@@ -114,7 +124,7 @@ public class Robot extends TimedRobot {
   @Override
   public void testInit() {
     // Cancels all running commands at the start of test mode.
-    // CommandScheduler.getInstance().cancelAll();
+    CommandScheduler.getInstance().cancelAll();
   }
 
   /** This function is called periodically during test mode. */

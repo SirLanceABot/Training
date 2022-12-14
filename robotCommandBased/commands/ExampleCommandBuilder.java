@@ -31,6 +31,6 @@ public class ExampleCommandBuilder
      */
     public Command getCommand(int commandID)
     {
-        return new ExampleCommand(this.exampleSubsystem, commandID, true);
+        return new ExampleCommand(this.exampleSubsystem, commandID);
     }
 }
