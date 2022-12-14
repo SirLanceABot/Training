@@ -1,13 +1,11 @@
 package frc.robot;
 
 import java.lang.invoke.MethodHandles;
-import java.util.ArrayList;
 
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.livewindow.LiveWindow;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
-import frc.robot.subsystems.SubsystemTeam;
 
 /*
 FWIW, a good way to initialize motors is to do this via a state machine,
@@ -20,16 +18,15 @@ FWIW, a good way to initialize motors is to do this via a state machine,
 
 // order of execution: previous_modeExit, modeInit, modePeriodic, robotPeriodic
 
-public class Robot extends TimedRobot {
+class Robot extends TimedRobot {
   static
   {
       System.out.println("Loading: " + MethodHandles.lookup().lookupClass().getCanonicalName());
   }
 
   private Command m_autonomousCommand;
-  public RobotContainer m_robotContainer;
-  private ArrayList<SubsystemTeam> m_subsystemArrayList = new ArrayList<SubsystemTeam>();
-
+  private RobotContainer m_robotContainer;
+  
   Robot()
   {
     LiveWindow.disableAllTelemetry(); // don't waste time on stuff we don't need
@@ -43,7 +40,7 @@ public class Robot extends TimedRobot {
   public void robotInit() {
     // Instantiate our RobotContainer.  This will perform all our button bindings, and put our
     // autonomous chooser on the dashboard.
-    m_robotContainer = new RobotContainer(m_subsystemArrayList);
+    m_robotContainer = new RobotContainer();
   }
 
   /**
@@ -67,11 +64,9 @@ public class Robot extends TimedRobot {
   @Override
   public void robotPeriodic() 
   {
-    m_subsystemArrayList.forEach( SubsystemTeam::readPeriodicInputs );
-
+    m_robotContainer.readPeriodic();
     CommandScheduler.getInstance().run();
-
-    m_subsystemArrayList.forEach( SubsystemTeam::writePeriodicOutputs );
+    m_robotContainer.writePeriodic();
   }
 
   /** This function is called once each time the robot enters Disabled mode. */

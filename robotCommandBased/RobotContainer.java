@@ -41,7 +41,7 @@ import static frc.robot.Constants.*;
  * periodic methods (other than the scheduler calls). Instead, the structure of the robot (including
  * subsystems, commands, and button mappings) should be declared here.
  */
-public class RobotContainer {
+class RobotContainer {
   static
   {
       System.out.println("Loading: " + MethodHandles.lookup().lookupClass().getCanonicalName());
@@ -61,8 +61,8 @@ public class RobotContainer {
   private final boolean useFanFSM           = no;
 
   private final XboxController driverController = new XboxController(driverControllerID);
-  private final ArrayList<SubsystemTeam> m_subsystemArrayList;
-  
+  private final ArrayList<SubsystemTeam> m_subsystemArrayList = new ArrayList<SubsystemTeam>();
+
   /////////////////////////////////////////
   // SUBSYSTEMS
   /////////////////////////////////////////
@@ -79,9 +79,7 @@ public class RobotContainer {
 
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
   // include the useAutonomous for all the subsystems required by an autonomous command
-  public RobotContainer(ArrayList<SubsystemTeam> m_subsystemArrayList) {
-
-    this.m_subsystemArrayList = m_subsystemArrayList;
+  RobotContainer() {
 
      // DataLog log = new DataLog("/home/lvuser", "MyUStestLog"+System.currentTimeMillis()+".wpilog");
      DataLogManager.start();
@@ -201,7 +199,7 @@ public class RobotContainer {
    *
    * @return the command to run in autonomous
    */
-  public Command getAutonomousCommand() {
+  Command getAutonomousCommand() {
     return autoChooser == null ? null : autoChooser.getSelected();
   }
   /////////////////////////////////////////
@@ -276,6 +274,16 @@ public class RobotContainer {
 // the status of a button with all the other PeriodIO values and using that value
 // in the Fan FSM. Those bindings are not established here in RobotContainer.
 //---------------------------------------------------------------------------------
+  }
+
+  void readPeriodic()
+  {
+    m_subsystemArrayList.forEach( SubsystemTeam::readPeriodicInputs );
+  }
+
+  void writePeriodic()
+  {
+    m_subsystemArrayList.forEach( SubsystemTeam::writePeriodicOutputs );
   }
 }
 
