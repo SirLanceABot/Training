@@ -10,11 +10,10 @@ package frc.robot.subsystems;
 import java.lang.invoke.MethodHandles;
 
 import edu.wpi.first.wpilibj.XboxController;
-import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
 import frc.robot.commands.FanFSMCommand;
 
-public class FanFSMSubsystem  extends SubsystemBase implements SubsystemTeam{
+public class FanFSMSubsystem  extends SubsystemTeam {
   static
   {
       System.out.println("Loading: " + MethodHandles.lookup().lookupClass().getCanonicalName());

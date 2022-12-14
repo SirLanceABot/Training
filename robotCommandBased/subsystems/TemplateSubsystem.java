@@ -3,10 +3,9 @@ package frc.robot.subsystems;
 import edu.wpi.first.wpilibj.XboxController; // example
 import edu.wpi.first.wpilibj2.command.CommandBase;
 import edu.wpi.first.wpilibj2.command.RunCommand;
-import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.WaitCommand;
 
-public class TemplateSubsystem  extends SubsystemBase implements SubsystemTeam{
+public class TemplateSubsystem  extends SubsystemTeam{
 
   public TemplateSubsystem(XboxController driverController) // pass in all the stuff this class needs from above
     {

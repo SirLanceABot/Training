@@ -1,10 +1,9 @@
 package frc.robot.subsystems;
 
-import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.commands.ExampleCommandBuilder;
 import frc.robot.commands.ExampleSubsystemDefaultCommand;
 
-public class ExampleSubsystem extends SubsystemBase implements SubsystemTeam {
+public class ExampleSubsystem extends SubsystemTeam {
   
   private int printCount;
 

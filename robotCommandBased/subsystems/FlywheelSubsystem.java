@@ -8,7 +8,6 @@ import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
-import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
 import com.ctre.phoenix.ErrorCode;
 import com.ctre.phoenix.motorcontrol.NeutralMode;
@@ -19,7 +18,7 @@ import com.ctre.phoenix.motorcontrol.can.TalonFX;
 import com.ctre.phoenix.motorcontrol.can.TalonFXConfiguration;
 import com.ctre.phoenix.sensors.SensorVelocityMeasPeriod;
 
-public class FlywheelSubsystem extends SubsystemBase implements SubsystemTeam {
+public class FlywheelSubsystem extends SubsystemTeam {
   static
   {
       System.out.println("Loading: " + MethodHandles.lookup().lookupClass().getCanonicalName());
