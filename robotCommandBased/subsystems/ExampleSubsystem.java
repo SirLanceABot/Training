@@ -6,12 +6,15 @@ import frc.robot.commands.ExampleSubsystemDefaultCommand;
 
 public class ExampleSubsystem extends SubsystemBase implements SubsystemTeam {
   
+  private int printCount;
+
   /** Creates a new ExampleSubsystem. */
   public ExampleSubsystem()
     {
       final ExampleSubsystemDefaultCommand m_defaultCommand = new ExampleSubsystemDefaultCommand(this);
       setDefaultCommand( m_defaultCommand );
       configureCommands();
+      printCount = 0;
     }
 
   @Override
@@ -26,12 +29,16 @@ public class ExampleSubsystem extends SubsystemBase implements SubsystemTeam {
 
   public void readPeriodicInputs()
   {
-    System.out.println("read inputs ExampleSubsystem");
+    // System.out.println("read inputs ExampleSubsystem");
   }
   
   public void writePeriodicOutputs()
 {
-  System.out.println("write outputs ExampleSubsystem");
+  if(++printCount >= 20)
+  {
+    System.out.println("write outputs ExampleSubsystem");
+    printCount = 0;
+  }
 }
 
 ////////////////////////////////////////////////////////////////////////////////

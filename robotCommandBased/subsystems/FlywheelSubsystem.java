@@ -25,12 +25,15 @@ public class FlywheelSubsystem extends SubsystemBase implements SubsystemTeam {
       System.out.println("Loading: " + MethodHandles.lookup().lookupClass().getCanonicalName());
   }
 
+  private int printCount;
+
   public FlywheelSubsystem(XboxController driverController)
   {
     System.out.println("construct FlywheelSubsystem");
     createFlywheelMotorController(ParameterSetAttemptCount);
     mPeriodicIO = new PeriodicIO(); // all the inputs appear here
     this.driverController = driverController; // example, pass in all the stuff this class needs from above
+    printCount = 0;
   }
 
   @Override
@@ -42,13 +45,16 @@ public class FlywheelSubsystem extends SubsystemBase implements SubsystemTeam {
 
   public void writePeriodicOutputs()
   {
-    //System.out.println("write outputs FlywheelSubsystem");
+    if(++printCount >= 20)
+    {
+      System.out.println("flywheel " + mPeriodicIO.velocity + " RPM");
+      printCount = 0;
+    }
   }
   
    @Override
   public void periodic() {
   // This method will be called once per scheduler run
-  System.out.println("flywheel " + mPeriodicIO.velocity + " RPM"); // example
   }
 
   @Override
