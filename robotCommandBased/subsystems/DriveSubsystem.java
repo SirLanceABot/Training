@@ -253,13 +253,15 @@ public class DriveSubsystem extends SubsystemTeam {
     return rc == REVLibError.kOk ? 0 : 1;
   }
 
-  public void setDriveStraightSlowly()
+  public void DriveStraightSlowly()
   {
-    setTestMotorPctVBus.accept(.15);
+    System.out.println("set slow motor speed");
+    setTestMotorPctVBus.accept(.25);
   }
 
-  public void setDriveStop()
+  public void DriveStop()
   {
+    System.out.println("set motor off");
     setTestMotorPctVBus.accept(0.);
   }
 }

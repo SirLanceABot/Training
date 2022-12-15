@@ -44,7 +44,7 @@ public class FlywheelSubsystem extends SubsystemTeam {
 
   public void writePeriodicOutputs()
   {
-    if(++printCount >= 20)
+    if(++printCount >= 500)
     {
       System.out.println("flywheel " + mPeriodicIO.velocity + " RPM");
       printCount = 0;
