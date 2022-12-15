@@ -2,6 +2,7 @@ package frc.robot;
 
 import java.lang.invoke.MethodHandles;
 
+import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.livewindow.LiveWindow;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -65,6 +66,7 @@ class Robot extends TimedRobot {
   @Override
   public void robotPeriodic() 
   {
+    System.out.println("robotperiodic");System.out.flush();
     SubsystemTeam.readPeriodic();
     CommandScheduler.getInstance().run();
     SubsystemTeam.writePeriodic();
@@ -75,6 +77,7 @@ class Robot extends TimedRobot {
   public void disabledInit()
   {
     // Cancels all running commands.
+    DriverStation.reportWarning("Canceling all commands in Disabled", false);
     CommandScheduler.getInstance().cancelAll(); // be careful - there might be something you want to keep running
   }
 

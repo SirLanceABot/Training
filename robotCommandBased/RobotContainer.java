@@ -12,6 +12,7 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.DataLogManager;
 import edu.wpi.first.util.datalog.DataLog;
 import edu.wpi.first.util.datalog.StringLogEntry;
+import edu.wpi.first.util.function.BooleanConsumer;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
@@ -45,8 +46,15 @@ class RobotContainer {
       System.out.println("Loading: " + MethodHandles.lookup().lookupClass().getCanonicalName());
   }
  
-  boolean yes = true;
-  boolean no = false;
+  static final boolean yes = true;
+  static final boolean no = false;
+
+// activate or not debug logging
+// activate or not debug logging
+// activate or not debug logging
+
+  private final boolean useDataLog = yes; // this uses space on roboRIO which runs out after some time of logging
+  private final boolean useShuffleBoardLog = yes; // record a ShuffleBoard session then convert playback
 
 // activate or not selected subsystems
 // activate or not selected subsystems
@@ -79,6 +87,7 @@ class RobotContainer {
   // include the useAutonomous for all the subsystems required by an autonomous command
   RobotContainer() {
 
+    if(useDataLog)
      // DataLog log = new DataLog("/home/lvuser", "MyUStestLog"+System.currentTimeMillis()+".wpilog");
      DataLogManager.start();
      DataLog log = DataLogManager.getLog();
@@ -129,8 +138,10 @@ class RobotContainer {
    */
   private void configureAutoChooser()
   {
-      // CommandGroupBase.clearGroupedCommands();
-      // autonomous commands and the subsystems each command requires
+    // autonomous commands and the subsystems each command requires
+    // note that instantiating objects here means that are all instantiated at this point
+    // watch out for side effects that take place.
+    // To defer instantiation until later then use the String autoChooser instead of Object
 //---------------------------------------------------------------------------------
       autoChooser.addOption("Auto 1",
             new Autonomous1Command(flywheelSubsystem).get());
@@ -154,14 +165,17 @@ class RobotContainer {
       autoChooser.addOption("print " + count + " times in " + timeout + " seconds",
             new Autonomous5Command(count, timeout));
 //---------------------------------------------------------------------------------
-      double time = 14.;
+      double time = 4.;
       autoChooser.addOption("drive straight slowly " + time + " seconds",
-            new RunCommand
+            new RunCommand // run repeatedly
                 (
-                  driveSubsystem::setDriveStraightSlowly, driveSubsystem
+                  driveSubsystem::DriveStraightSlowly, driveSubsystem
                 )
-            .andThen(new WaitCommand(time))
-            .andThen(driveSubsystem::setDriveStop, driveSubsystem)
+            .withTimeout(time)
+            .andThen(driveSubsystem::DriveStop, driveSubsystem) // only executed once; make RunCommand to multi-execute
+            .andThen(driveSubsystem::DriveStop, driveSubsystem) // only executed once; make RunCommand to multi-execute
+            .andThen(driveSubsystem::DriveStop, driveSubsystem) // only executed once; make RunCommand to multi-execute
+            // or duplicate the individuals a few times to make sure it stops
             );
 //---------------------------------------------------------------------------------
       autoChooser.setDefaultOption("Auto None - ERROR",
@@ -194,6 +208,8 @@ class RobotContainer {
 
   void configureSchedulerLog()
   {
+    if(useShuffleBoardLog || useDataLog)
+    {
     // Set the scheduler to log events for command initialize, interrupt,
     // finish, execute
     // Log to the ShuffleBoard and the WPILib data log tool.
@@ -204,17 +220,17 @@ class RobotContainer {
         .onCommandInitialize(
             command ->
             {
-                commandLogEntry.append(command.getClass() + " " + command.getName() + " initialized");
-                Shuffleboard.addEventMarker(
-                    "Command initialized", command.getName(), EventImportance.kNormal);
+              if(useDataLog) commandLogEntry.append(command.getClass() + " " + command.getName() + " initialized");
+              if(useShuffleBoardLog) Shuffleboard.addEventMarker(
+                  "Command initialized", command.getName(), EventImportance.kNormal);
             }
         );
     CommandScheduler.getInstance()
         .onCommandInterrupt(
             command ->
             {
-                commandLogEntry.append(command.getClass() + " " + command.getName() + " interrupted");
-                Shuffleboard.addEventMarker(
+              if(useDataLog) commandLogEntry.append(command.getClass() + " " + command.getName() + " interrupted");
+              if(useShuffleBoardLog) Shuffleboard.addEventMarker(
                     "Command interrupted", command.getName(), EventImportance.kNormal);
             }
         );
@@ -222,8 +238,8 @@ class RobotContainer {
         .onCommandFinish(
             command ->
             {
-                commandLogEntry.append(command.getClass() + " " + command.getName() + " finished");
-                Shuffleboard.addEventMarker(
+              if(useDataLog) commandLogEntry.append(command.getClass() + " " + command.getName() + " finished");
+              if(useShuffleBoardLog)  Shuffleboard.addEventMarker(
                     "Command finished", command.getName(), EventImportance.kNormal);
             }
         );
@@ -232,11 +248,12 @@ class RobotContainer {
         .onCommandExecute( // this can generate a lot of events
             command ->
             {
-                commandLogEntry.append(command.getClass() + " " + command.getName() + " executed");
-                Shuffleboard.addEventMarker(
+              if(useDataLog) commandLogEntry.append(command.getClass() + " " + command.getName() + " executed");
+              if(useShuffleBoardLog)  Shuffleboard.addEventMarker(
                     "Command executed", command.getName(), EventImportance.kNormal);
             }
         );
+    }
   }
 
   ////////////////////////////////////////////////////////////////////////////////
@@ -262,6 +279,9 @@ class RobotContainer {
 //---------------------------------------------------------------------------------
   }
 }
+
+// CommandGroupBase.clearGroupedCommands();
+
 
 // If command already exists and in case a different command is requested after the first time through,
 // can't reuse grouped commands without first ungrouping them.
