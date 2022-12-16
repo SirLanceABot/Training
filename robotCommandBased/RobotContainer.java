@@ -128,9 +128,9 @@ class RobotContainer {
     pd.close();
   }
 
-  /////////////////////////////////////////
-  // AUTONOMOUS COMMANDS
-  /////////////////////////////////////////
+/////////////////////////////////////////
+// AUTONOMOUS COMMANDS
+/////////////////////////////////////////
   /**
    * Method to configure the chooser for the Autonomous Selection
    */
@@ -143,7 +143,7 @@ class RobotContainer {
 //---------------------------------------------------------------------------------
       autoChooser.addOption("Auto 1",
             new Autonomous1Command(flywheelSubsystem).get());
-      //---------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------
       autoChooser.addOption("Auto 2",
             new Autonomous2Command(flywheelSubsystem).get());
 //---------------------------------------------------------------------------------
@@ -173,7 +173,7 @@ class RobotContainer {
             .andThen(driveSubsystem::DriveStop, driveSubsystem) // only executed once; make RunCommand to multi-execute
             .andThen(driveSubsystem::DriveStop, driveSubsystem) // only executed once; make RunCommand to multi-execute
             .andThen(driveSubsystem::DriveStop, driveSubsystem) // only executed once; make RunCommand to multi-execute
-            // or duplicate the individuals a few times to make sure it stops
+                                                                // or duplicate the individuals a few times to make sure it stops
             );
 //---------------------------------------------------------------------------------
       autoChooser.setDefaultOption("Auto None - ERROR",
@@ -200,9 +200,9 @@ class RobotContainer {
   Command getAutonomousCommand() {
     return autoChooser == null ? null : autoChooser.getSelected();
   }
-  /////////////////////////////////////////
-  // end AUTONOMOUS COMMANDS
-  /////////////////////////////////////////
+/////////////////////////////////////////
+// end AUTONOMOUS COMMANDS
+/////////////////////////////////////////
 
   void configureSchedulerLog()
   {
