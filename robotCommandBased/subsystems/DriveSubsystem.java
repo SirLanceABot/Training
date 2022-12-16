@@ -90,6 +90,7 @@ public class DriveSubsystem extends SubsystemTeam {
   @Override
   public void readPeriodicInputs()
     {
+      SmartDashboard.putString(this.getName() + " read", "readPeriodicInputs");
       mPeriodicIO.PctOutput = getPctOutput.get();
       mPeriodicIO.busVoltage = getBusVoltage.get();
       mPeriodicIO.voltageCompensation = getVoltageCompensation.get();
@@ -99,6 +100,7 @@ public class DriveSubsystem extends SubsystemTeam {
 
   public void writePeriodicOutputs()
   {
+    SmartDashboard.putString(this.getName() + " write", "writePeriodicOutputs");
     //System.out.println("write outputs DriveSubsystem");
   }
   

@@ -10,7 +10,7 @@ package frc.robot.subsystems;
 import java.lang.invoke.MethodHandles;
 
 import edu.wpi.first.wpilibj.XboxController;
-
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import frc.robot.commands.FanFSMCommand;
 
 public class FanFSMSubsystem  extends SubsystemTeam {
@@ -49,12 +49,14 @@ public class FanFSMSubsystem  extends SubsystemTeam {
   public void readPeriodicInputs()
     {
       // populate each input variable (run by SubsystemTeamManagerSubsystem)
+      SmartDashboard.putString(this.getName() + " read", "readPeriodicInputs");
       mPeriodicIO.AButtonPressed = driverController.getAButtonPressed();
       mPeriodicIO.BButtonPressed = driverController.getBButtonPressed();
     }
 
     public void writePeriodicOutputs()
     {
+      SmartDashboard.putString(this.getName() + " write", "writePeriodicOutputs");
       //System.out.println("write outputs FanFSMSubsystem");
     }
     

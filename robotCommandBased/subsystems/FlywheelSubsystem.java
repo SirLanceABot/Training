@@ -39,14 +39,16 @@ public class FlywheelSubsystem extends SubsystemTeam {
   public void readPeriodicInputs()
   {
       // populate each input variable
-      mPeriodicIO.velocity = getFlywheelSpeed.get();
+      SmartDashboard.putString(this.getName() + " read", "readPeriodicInputs");
+        mPeriodicIO.velocity = getFlywheelSpeed.get();
   }
 
   public void writePeriodicOutputs()
   {
-    if(++printCount >= 500)
+    if(++printCount >= 50)
     {
-      System.out.println("flywheel " + mPeriodicIO.velocity + " RPM");
+      SmartDashboard.putString(this.getName() + " write", mPeriodicIO.velocity + " RPM");
+      System.out.println();
       printCount = 0;
     }
   }

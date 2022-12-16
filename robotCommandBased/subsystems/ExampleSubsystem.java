@@ -1,5 +1,6 @@
 package frc.robot.subsystems;
 
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import frc.robot.commands.ExampleCommandBuilder;
 import frc.robot.commands.ExampleSubsystemDefaultCommand;
 
@@ -28,14 +29,16 @@ public class ExampleSubsystem extends SubsystemTeam {
 
   public void readPeriodicInputs()
   {
+    SmartDashboard.putString(this.getName() + " read", "readPeriodicInputs");
+
     // System.out.println("read inputs ExampleSubsystem");
   }
   
   public void writePeriodicOutputs()
 {
-  if(++printCount >= 500)
+  if(++printCount >= 50)
   {
-    System.out.println("write outputs ExampleSubsystem");
+    SmartDashboard.putString(this.getName() + " write", "writePeriodicOutputs " + printCount);
     printCount = 0;
   }
 }
