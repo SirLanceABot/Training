@@ -5,7 +5,6 @@ package frc.robot.subsystems;
 
 import java.util.ArrayList;
 
-import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
 public abstract class SubsystemTeam extends SubsystemBase
@@ -14,27 +13,23 @@ public abstract class SubsystemTeam extends SubsystemBase
     
     public SubsystemTeam()
     {
-        super();
-        m_subsystemArrayList.add( (SubsystemTeam) this );
+        super(); // do the usual WPILib stuff first
+        m_subsystemArrayList.add( (SubsystemTeam) this ); // register this subsystem for our periodicIO
     }
 
-    public void readPeriodicInputs()
-    {
-        DriverStation.reportError( "override readPeriodicInputs", true );
-    }
+    abstract public void readPeriodicInputs(); // force others to have this implemented
 
-    public void writePeriodicOutputs()
-    {
-        DriverStation.reportError( "override writePeriodicOutputs", true );
-    }
-    
+    abstract public void writePeriodicOutputs(); // force others to have this implemented
+
+    // read inputs for all registered subsystems
     public static void readPeriodic()
     {
-      m_subsystemArrayList.forEach( SubsystemTeam::readPeriodicInputs );
+      m_subsystemArrayList.forEach( (subsystem) -> subsystem.readPeriodicInputs() );
     }
   
+    // write outputs for all registered subsystems
     public static void writePeriodic()
     {
-      m_subsystemArrayList.forEach( SubsystemTeam::writePeriodicOutputs );
+      m_subsystemArrayList.forEach( (subsystem) -> subsystem.writePeriodicOutputs() );
     }
 }
