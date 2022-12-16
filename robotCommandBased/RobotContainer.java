@@ -12,13 +12,11 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.DataLogManager;
 import edu.wpi.first.util.datalog.DataLog;
 import edu.wpi.first.util.datalog.StringLogEntry;
-import edu.wpi.first.util.function.BooleanConsumer;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.RunCommand;
 import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
-import edu.wpi.first.wpilibj2.command.WaitCommand;
 import edu.wpi.first.wpilibj2.command.button.JoystickButton;
 
 import frc.robot.commands.Autonomous1Command;
@@ -46,8 +44,8 @@ class RobotContainer {
       System.out.println("Loading: " + MethodHandles.lookup().lookupClass().getCanonicalName());
   }
  
-  static final boolean yes = true;
-  static final boolean no = false;
+  static boolean yes = true;
+  static boolean no = false;
 
 // activate or not debug logging
 // activate or not debug logging
