@@ -29,18 +29,14 @@ public class ExampleSubsystem extends SubsystemTeam {
 
   public void readPeriodicInputs()
   {
-    SmartDashboard.putString(this.getName() + " read", "readPeriodicInputs");
+    SmartDashboard.putNumber(this.getName() + ".readPeriodicInputs()", ++printCount);
 
     // System.out.println("read inputs ExampleSubsystem");
   }
   
   public void writePeriodicOutputs()
 {
-  if(++printCount >= 50)
-  {
-    SmartDashboard.putString(this.getName() + " write", "writePeriodicOutputs " + printCount);
-    printCount = 0;
-  }
+    SmartDashboard.putNumber(this.getName() + ".writePeriodicOutputs()", ++printCount);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
