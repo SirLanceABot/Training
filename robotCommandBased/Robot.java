@@ -9,13 +9,14 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import frc.robot.subsystems.SubsystemTeam;
 
+//FIXME  comment from CD
 /*
 FWIW, a good way to initialize motors is to do this via a state machine,
- one config call per iteration of Periodic(). You can also check to see 
- if the controller has rebooted, and restart the state machine if this occurs.
-  From your description, you may be maxing out CAN bandwidth, triggering
-   errors on some of the configuration calls. Once you start hitting error
-    paths, odds of something unusual happening are higher.
+one config call per iteration of Periodic(). You can also check to see 
+if the controller has rebooted, and restart the state machine if this occurs.
+From your description, you may be maxing out CAN bandwidth, triggering
+errors on some of the configuration calls. Once you start hitting error
+paths, odds of something unusual happening are higher.
 */
 
 // order of execution: previous_modeExit, modeInit, modePeriodic, robotPeriodic
@@ -52,17 +53,11 @@ class Robot extends TimedRobot {
    * <p>This runs after the mode specific periodic functions, but before LiveWindow and
    * SmartDashboard integrated updating.
    */
-  // @Override
-  // public void robotPeriodic() {
-  //   // this is run after the other Periodic methods
-
-  //   // Runs the Scheduler.  This is responsible for polling buttons, adding newly-scheduled
-  //   // commands, running already-scheduled commands, removing finished or interrupted commands,
-  //   // and running subsystem periodic() methods.  This must be called from the robot's periodic
-  //   // block in order for anything in the Command-based framework to work.
-  //   CommandScheduler.getInstance().run();
-  // }
-
+    // this is run after the other Periodic methods
+    // Runs the Scheduler.  This is responsible for polling buttons, adding newly-scheduled
+    // commands, running already-scheduled commands, removing finished or interrupted commands,
+    // and running subsystem periodic() methods.  This must be called from the robot's periodic
+    // block in order for anything in the Command-based framework to work.
   @Override
   public void robotPeriodic() 
   {
@@ -82,7 +77,7 @@ class Robot extends TimedRobot {
   }
 
   @Override
-  public void disabledPeriodic() {}
+  public void disabledPeriodic() { }
 
   /** This autonomous runs the autonomous command selected by your {@link RobotContainer} class. */
   @Override

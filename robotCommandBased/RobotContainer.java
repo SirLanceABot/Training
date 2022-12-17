@@ -24,12 +24,15 @@ import frc.robot.commands.Autonomous2Command;
 import frc.robot.commands.Autonomous3Command;
 import frc.robot.commands.Autonomous4Command;
 import frc.robot.commands.Autonomous5Command;
+import frc.robot.commands.ExampleSubsystemDefaultCommand;
 import frc.robot.commands.SpinupFlywheelCommand;
 import frc.robot.subsystems.DriveSubsystem;
 import frc.robot.subsystems.ExampleSubsystem;
 import frc.robot.subsystems.FanFSMSubsystem;
 import frc.robot.subsystems.FlywheelSubsystem;
 
+import static frc.robot.Constants.Drive.*;
+import static frc.robot.Constants.Flywheel.*;
 import static frc.robot.Constants.*;
 
 /**
@@ -44,15 +47,15 @@ class RobotContainer {
       System.out.println("Loading: " + MethodHandles.lookup().lookupClass().getCanonicalName());
   }
  
-  static boolean yes = true;
+  static boolean yes = true; // don't use final because that cancels the purpose of eliminating dead code messages
   static boolean no = false;
 
 // activate or not debug logging
 // activate or not debug logging
 // activate or not debug logging
 
-  private final boolean useDataLog = no; // this uses space on roboRIO which runs out after some time of logging
-  private final boolean useShuffleBoardLog = no; // record a ShuffleBoard session then convert playback
+  private final boolean useDataLog = yes; // this uses space on roboRIO which runs out after some time of logging
+  private final boolean useShuffleBoardLog = yes; // record a ShuffleBoard session then convert playback
 
 // activate or not selected subsystems
 // activate or not selected subsystems
@@ -82,17 +85,18 @@ class RobotContainer {
   StringLogEntry commandLogEntry;
 
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
-  // include the useAutonomous for all the subsystems required by an autonomous command
+
   RobotContainer() {
 
     if(useDataLog)
-     // DataLog log = new DataLog("/home/lvuser", "MyUStestLog"+System.currentTimeMillis()+".wpilog");
-     DataLogManager.start();
-     DataLog log = DataLogManager.getLog();
-     String name = new String("/Commands/"); // make a prefix tree structure for the data
- 
-     commandLogEntry = new StringLogEntry(log, name+"events", "Event");
-     
+    {
+      // DataLog log = new DataLog("/home/lvuser", "MyUStestLog"+System.currentTimeMillis()+".wpilog");
+      DataLogManager.start();
+      DataLog log = DataLogManager.getLog();
+      var name = new String("/Commands/"); // make a prefix tree structure for the data
+      commandLogEntry = new StringLogEntry(log, name+"events", "Event");
+    }
+
     if(!useFullRobot) DriverStation.reportWarning("NOT USING FULL ROBOT", false);
     
     exampleSubsystem  = (useFullRobot || useExample  ? new ExampleSubsystem()                  : null);
@@ -116,6 +120,9 @@ class RobotContainer {
 
     // Configure the Driver/Operator Game Controllers buttons' bindings
     configureButtonBindings();
+
+    // Configure the default commands for all subsystems
+    configDefaultSubsystemCommands();
   }
 
   /**
@@ -140,6 +147,10 @@ class RobotContainer {
     // note that instantiating objects here means that are all instantiated at this point
     // watch out for side effects that take place.
     // To defer instantiation until later then use the String autoChooser instead of Object
+
+    // Generally the use of constants and decorators here is discouraged.
+    // Put the whole auto program command in the class and not dribble out parts of it here.
+    // Some bad examples below and some good examples.
 //---------------------------------------------------------------------------------
       autoChooser.addOption("Auto 1",
             new Autonomous1Command(flywheelSubsystem).get());
@@ -147,9 +158,9 @@ class RobotContainer {
       autoChooser.addOption("Auto 2",
             new Autonomous2Command(flywheelSubsystem).get());
 //---------------------------------------------------------------------------------
-      autoChooser.addOption("Spinup Flywheel to " + Constants.Flywheel.kAutoSPinRPM
+      autoChooser.addOption("Spinup Flywheel to " + Constants.Flywheel.kAutoSpinupRPM
                           + " RPM for " + Constants.Flywheel.kAutoTime + " seconds",
-            new SpinupFlywheelCommand(flywheelSubsystem, Constants.Flywheel.kAutoSPinRPM)
+            new SpinupFlywheelCommand(flywheelSubsystem, Constants.Flywheel.kAutoSpinupRPM)
             .withTimeout(Constants.Flywheel.kAutoTime));
 //---------------------------------------------------------------------------------
       autoChooser.addOption("Auto 3",
@@ -163,13 +174,12 @@ class RobotContainer {
       autoChooser.addOption("print " + count + " times in " + timeout + " seconds (nope-timeout doesn't do anything on an instant command)",
             new Autonomous5Command(count, timeout));
 //---------------------------------------------------------------------------------
-      double time = 3.;
       autoChooser.addOption("minimal move",
             new RunCommand // run repeatedly
                 (
                   driveSubsystem::DriveStraightSlowly, driveSubsystem
                 )
-            .withTimeout(time)
+            .withTimeout(autoMinimalMoveTime)
             .andThen(driveSubsystem::DriveStop, driveSubsystem) // only executed once; make RunCommand to multi-execute
             .andThen(driveSubsystem::DriveStop, driveSubsystem) // only executed once; make RunCommand to multi-execute
             .andThen(driveSubsystem::DriveStop, driveSubsystem) // only executed once; make RunCommand to multi-execute
@@ -197,13 +207,18 @@ class RobotContainer {
    *
    * @return the command to run in autonomous
    */
-  Command getAutonomousCommand() {
+  Command getAutonomousCommand()
+  {
     return autoChooser == null ? null : autoChooser.getSelected();
   }
 /////////////////////////////////////////
 // end AUTONOMOUS COMMANDS
 /////////////////////////////////////////
 
+
+/////////////////////////////////////////
+// Command Event Loggers
+/////////////////////////////////////////
   void configureSchedulerLog()
   {
     if(useShuffleBoardLog || useDataLog)
@@ -263,18 +278,28 @@ class RobotContainer {
   private void configureButtonBindings()
   {
 //---------------------------------------------------------------------------------
-    double speed = 500.; // establish the shooter flywheel start/stop button at speed
-
     new JoystickButton(driverController, XboxController.Button.kX.value)
       .toggleWhenActive( // 1st press starts command; 2nd press interrupts command
-        new SequentialCommandGroup(
+        new SequentialCommandGroup
+        (
           new InstantCommand( ()-> System.out.println("toggle X button flywheel")),
-          new SpinupFlywheelCommand(flywheelSubsystem, speed) ) );
+          new SpinupFlywheelCommand(flywheelSubsystem, kDriverButtonFlywheelSpeed)
+        ) );
 //---------------------------------------------------------------------------------
 // The FanFSMSubsystem and FanFSMCommand demonstrate traditional usage of getting
 // the status of a button with all the other PeriodIO values and using that value
 // in the Fan FSM. Those bindings are not established here in RobotContainer.
 //---------------------------------------------------------------------------------
+  }
+
+  ////////////////////////////////////////////////////////////////////////////////
+  ///////    DEFAULT COMMANDS    /////////////////////////////////////////////////
+  ////////////////////////////////////////////////////////////////////////////////
+  private void configDefaultSubsystemCommands()
+  {
+    driveSubsystem.setDefaultCommand( driveSubsystem.joystickDriveCommand() );
+
+    exampleSubsystem.setDefaultCommand( new ExampleSubsystemDefaultCommand(exampleSubsystem) );
   }
 }
 

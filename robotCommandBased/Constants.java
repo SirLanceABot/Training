@@ -15,15 +15,24 @@ public final class Constants {
     {
         System.out.println("Loading: " + MethodHandles.lookup().lookupClass().getCanonicalName());
     }
- 
-    public static final int testMotorPort = 3; // SparkMax CAN id
-    public static final double VoltageCompensation = 2;
     public static final int driverControllerID = 0;
-    public static final int configRetries = 5;
+    
+    public class Drive
+    {
+        public static final double autoMinimalMoveTime = 3.;
+        public static final int testMotorPort = 3; // SparkMax CAN id
+        public static final double VoltageCompensation = 10;
+        public static final int configRetries = 5;
+        public static final int statusFrame0Periodms = 10;
+        public static final int statusFrame1Periodms = 20;
+        public static final int statusFrame2Periodms = 20;
+        public static final double DriveStraightSlowlySpeed = 0.25;
+    }
 
     public class Flywheel
     {
-        public static final double kAutoSPinRPM = 600.;
+        public static final double kAutoSpinupRPM = 600.;
         public static final double kAutoTime = 10.;
+        public static final double kDriverButtonFlywheelSpeed = 500.; // establish the shooter flywheel start/stop button at speed
     }
 }
