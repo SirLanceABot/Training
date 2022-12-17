@@ -9,6 +9,7 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
 public abstract class SubsystemTeam extends SubsystemBase
 {
+    // list of all registered SubsystemTeam classes
     private final static ArrayList<SubsystemTeam> m_subsystemArrayList = new ArrayList<SubsystemTeam>();
     
     public SubsystemTeam()

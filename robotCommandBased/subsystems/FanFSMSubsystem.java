@@ -10,8 +10,8 @@ package frc.robot.subsystems;
 import java.lang.invoke.MethodHandles;
 
 import edu.wpi.first.wpilibj.XboxController;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
-import frc.robot.commands.FanFSMCommand;
+
+import frc.robot.commands.FanFSM;
 
 public class FanFSMSubsystem  extends SubsystemTeam {
   static
@@ -19,13 +19,13 @@ public class FanFSMSubsystem  extends SubsystemTeam {
       System.out.println("Loading: " + MethodHandles.lookup().lookupClass().getCanonicalName());
   }
 
-  FanFSMCommand fanFSMCommand;
+  FanFSM fanFSMCommand;
 
   public FanFSMSubsystem(XboxController driverController) // pass in all the stuff this class needs from above
     {  
         this.driverController = driverController;
         mPeriodicIO = new PeriodicIO(); // all the inputs appear here
-        fanFSMCommand = new FanFSMCommand(this, this.driverController);
+        fanFSMCommand = new FanFSM(this, this.driverController);
     }
    
   @Override
@@ -48,16 +48,15 @@ public class FanFSMSubsystem  extends SubsystemTeam {
   @Override
   public void readPeriodicInputs()
     {
-      // populate each input variable (run by SubsystemTeamManagerSubsystem)
-      SmartDashboard.putString(this.getName() + " read", "readPeriodicInputs");
+      // populate each input variable
+      // SmartDashboard.putString(this.getName() + " read", "readPeriodicInputs");
       mPeriodicIO.AButtonPressed = driverController.getAButtonPressed();
       mPeriodicIO.BButtonPressed = driverController.getBButtonPressed();
     }
 
     public void writePeriodicOutputs()
     {
-      SmartDashboard.putString(this.getName() + " write", "writePeriodicOutputs");
-      //System.out.println("write outputs FanFSMSubsystem");
+      // SmartDashboard.putString(this.getName() + " write", "writePeriodicOutputs");
     }
     
     

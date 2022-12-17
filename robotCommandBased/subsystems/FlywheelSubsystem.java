@@ -18,6 +18,8 @@ import com.ctre.phoenix.motorcontrol.can.TalonFX;
 import com.ctre.phoenix.motorcontrol.can.TalonFXConfiguration;
 import com.ctre.phoenix.sensors.SensorVelocityMeasPeriod;
 
+//FIXME lots of constants herein should go to Constants.Flywheel class.
+
 public class FlywheelSubsystem extends SubsystemTeam {
   static
   {
@@ -48,7 +50,6 @@ public class FlywheelSubsystem extends SubsystemTeam {
     if(++printCount >= 50)
     {
       SmartDashboard.putString(this.getName() + " write", mPeriodicIO.velocity + " RPM");
-      System.out.println();
       printCount = 0;
     }
   }

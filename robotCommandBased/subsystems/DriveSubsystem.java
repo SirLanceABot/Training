@@ -14,41 +14,16 @@ import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
-import edu.wpi.first.wpilibj2.command.CommandBase;
+import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.RunCommand;
 
-import static frc.robot.Constants.*;
+import static frc.robot.Constants.Drive.*;
 
 public class DriveSubsystem extends SubsystemTeam {
   static
   {
       System.out.println("Loading: " + MethodHandles.lookup().lookupClass().getCanonicalName());
   }
-
-  /**
-   * define default command for DriveSubsystem
-   * this inner class gets variables from its outer class; is that so wrong?
-   */
-  class DefaultCommand extends CommandBase
-  {
-    RunCommand defaultCommand = new RunCommand(
-            // define the command to execute
-            () -> {
-              setTestMotorPctVBus.accept(mPeriodicIO.driverControllerLeftX);
-            },
-            // requirement required for a default command - maybe not needed in 2023
-            DriveSubsystem.this
-            );
-
-    DefaultCommand()
-      { // once a default is set it cannot be changed to null or missing.
-        // maybe a new one could be set, though, that does nothing if desired.
-        DriveSubsystem.this.setDefaultCommand( defaultCommand );
-      }    
-  }
-  /**
-   * end define default command
-   */
 
   /**
    * define all the inputs to be read at once
@@ -81,7 +56,6 @@ public class DriveSubsystem extends SubsystemTeam {
       mPeriodicIO = new PeriodicIO();
       this.driverController = driverController; 
       createTestMotorController(configRetries); //FIXME DEFINE A CONFIG MODE TO RUN IN PERIODIC
-      new DefaultCommand(); // instantiate Drive's default command
 
       gyro = new Navx(gyro);      
       
@@ -100,15 +74,14 @@ public class DriveSubsystem extends SubsystemTeam {
 
   public void writePeriodicOutputs()
   {
-    SmartDashboard.putString(this.getName() + " write", "writePeriodicOutputs");
-    //System.out.println("write outputs DriveSubsystem");
+    SmartDashboard.putNumber(this.getName() + " velocity RPM", mPeriodicIO.encoder);
+    gyro.displayGyro(); // get the GYRO values
   }
   
   @Override
   public void periodic() {
     // This method will be called once per scheduler run
-    //FIXME System.out.println(mPeriodicIO.encoder + " RPM");
-    gyro.displayGyro(); // get the GYRO values
+
 
     // IF CONFIG MODE DO ONE CONFIG STATEMENT PER CYCLE
   }
@@ -172,13 +145,13 @@ public class DriveSubsystem extends SubsystemTeam {
     testMotor.setControlFramePeriodMs(10);
     errors += check(testMotor, "set control frame period", true);
 
-    testMotor.setPeriodicFramePeriod(PeriodicFrame.kStatus0, 10); // 10 put values in Constants
+    testMotor.setPeriodicFramePeriod(PeriodicFrame.kStatus0, statusFrame0Periodms); // 10 put values in Constants
     errors += check(testMotor, "set status frame 0 period", true);
 
-    testMotor.setPeriodicFramePeriod(PeriodicFrame.kStatus1, 20); // 20
+    testMotor.setPeriodicFramePeriod(PeriodicFrame.kStatus1, statusFrame1Periodms); // 20
     errors += check(testMotor, "set status frame 1 period", true);
 
-    testMotor.setPeriodicFramePeriod(PeriodicFrame.kStatus2, 20); // 50
+    testMotor.setPeriodicFramePeriod(PeriodicFrame.kStatus2, statusFrame2Periodms); // 50
     errors += check(testMotor, "set status frame 2 period", true);
 
     // testMotor.setPeriodicFramePeriod(PeriodicFrame.kStatus3, 5); // not used?
@@ -197,6 +170,7 @@ public class DriveSubsystem extends SubsystemTeam {
     //
     setTestMotorPctVBus = (speed) -> 
     {
+      // System.out.println("drive speed " + speed);
       testMotor.set(speed);
       check(testMotor, "set %VBus error", false);
     };
@@ -258,7 +232,7 @@ public class DriveSubsystem extends SubsystemTeam {
   public void DriveStraightSlowly()
   {
     System.out.println("set slow motor speed");
-    setTestMotorPctVBus.accept(.25);
+    setTestMotorPctVBus.accept(DriveStraightSlowlySpeed);
   }
 
   public void DriveStop()
@@ -266,4 +240,19 @@ public class DriveSubsystem extends SubsystemTeam {
     System.out.println("set motor off");
     setTestMotorPctVBus.accept(0.);
   }
+
+  
+  public Command joystickDriveCommand()
+      { 
+        return
+          new RunCommand(
+            // define the command to execute
+            () -> {
+              if(!DriverStation.isAutonomous()) // ignore joystick during auto
+                setTestMotorPctVBus.accept(mPeriodicIO.driverControllerLeftX);
+            },
+            // requirement required for a default command - maybe not needed in 2023
+            DriveSubsystem.this
+            );
+      }
 }

@@ -2,7 +2,6 @@ package frc.robot.subsystems;
 
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import frc.robot.commands.ExampleCommandBuilder;
-import frc.robot.commands.ExampleSubsystemDefaultCommand;
 
 public class ExampleSubsystem extends SubsystemTeam {
   
@@ -11,8 +10,6 @@ public class ExampleSubsystem extends SubsystemTeam {
   /** Creates a new ExampleSubsystem. */
   public ExampleSubsystem()
     {
-      final ExampleSubsystemDefaultCommand m_defaultCommand = new ExampleSubsystemDefaultCommand(this);
-      setDefaultCommand( m_defaultCommand );
       configureCommands();
       printCount = 0;
     }
