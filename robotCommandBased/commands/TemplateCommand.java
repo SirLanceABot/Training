@@ -28,15 +28,19 @@ public class TemplateCommand extends CommandBase {
         this.runsWhenDisabled = runsWhenDisabled;
     }
  
-  /** The initial subroutine of a command. Called once when the command is initially scheduled. */
+  /** The initial subroutine of a command.
+   *  Called once when the command is initially scheduled.
+   *  The scheduler does not have to run */
   public void initialize() {}
 
-  /** The main body of a command. Called repeatedly while the command is scheduled. */
+  /** The main body of a command. Called repeatedly
+   *  while the command is scheduled and scheduler runs. */
   public void execute() {}
 
   /**
    * The action to take when the command ends. Called when either the command finishes normally, or
    * when it interrupted/canceled.
+   * The scheduler does not have to be run.
    *
    * <p>Do not schedule commands here that share requirements with this command. Use {@link
    * #andThen(Command...)} instead.

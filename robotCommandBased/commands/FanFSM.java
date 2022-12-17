@@ -12,7 +12,7 @@ import edu.wpi.first.wpilibj2.command.button.Trigger;
 
 import frc.robot.subsystems.FanFSMSubsystem;
 
-public class FanFSMCommand {
+public class FanFSM {
 
     static
     {
@@ -39,8 +39,12 @@ public class FanFSMCommand {
 
     // Store Transitions defined for this FSM
     static List<Transition> transitions = new ArrayList<Transition>(10); // specify size as number of transitions or more
-
-    public FanFSMCommand(FanFSMSubsystem subsystem, XboxController driverController)
+/**
+ * 
+ * @param subsystem caller (parent) is the required subsystem
+ * @param driverController game controller used for the FSM
+ */
+    public FanFSM(FanFSMSubsystem subsystem, XboxController driverController)
     {
       // info from calling subsystem
         subsystemRequirement = subsystem;
@@ -91,6 +95,8 @@ public class FanFSMCommand {
 // until a trigger revives the FSM.
 // The states all run until interrupted by the scheduling of a new state
 
+//___________________________________________________________________________________________________________
+
     // OffState
     public class OffState extends CommandBase
     {
@@ -102,7 +108,8 @@ public class FanFSMCommand {
       public void execute() { System.out.println("Off"); } // refresh state as needed
     }    // end OffState
 
-    // HighState
+//___________________________________________________________________________________________________________
+
     public class HighState extends CommandBase
     {
       // using default the command is interruptible and does NOT run when DISABLED
@@ -112,6 +119,8 @@ public class FanFSMCommand {
       @Override
       public void execute() { System.out.println("High"); } // refresh state as needed
     }    // end HighState
+
+//___________________________________________________________________________________________________________
 
     // MedState
     public class MedState extends CommandBase
@@ -124,6 +133,8 @@ public class FanFSMCommand {
       public void execute() { System.out.println("Med"); } // refresh state as needed
     }    // end MedState
 
+//___________________________________________________________________________________________________________
+
     // LowState
     public class LowState extends CommandBase
     {
@@ -134,6 +145,8 @@ public class FanFSMCommand {
       @Override
       public void execute() { System.out.println("Low"); } // refresh state as needed
     }   // end LowState
+
+//___________________________________________________________________________________________________________
 //end STATES
 //end STATES
 //end STATES
