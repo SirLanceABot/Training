@@ -66,7 +66,7 @@ class Robot extends TimedRobot {
   @Override
   public void robotPeriodic() 
   {
-    System.out.println("robotperiodic");System.out.flush();
+    // System.out.println("robotPeriodic");System.out.flush();
     SubsystemTeam.readPeriodic();
     CommandScheduler.getInstance().run();
     SubsystemTeam.writePeriodic();

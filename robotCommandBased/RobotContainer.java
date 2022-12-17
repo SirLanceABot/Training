@@ -51,8 +51,8 @@ class RobotContainer {
 // activate or not debug logging
 // activate or not debug logging
 
-  private final boolean useDataLog = yes; // this uses space on roboRIO which runs out after some time of logging
-  private final boolean useShuffleBoardLog = yes; // record a ShuffleBoard session then convert playback
+  private final boolean useDataLog = no; // this uses space on roboRIO which runs out after some time of logging
+  private final boolean useShuffleBoardLog = no; // record a ShuffleBoard session then convert playback
 
 // activate or not selected subsystems
 // activate or not selected subsystems
@@ -158,13 +158,13 @@ class RobotContainer {
       autoChooser.addOption("Auto 4",
             new Autonomous4Command(10000).withTimeout(2.5));
 //---------------------------------------------------------------------------------
-      int count = 1000;
+      int count = 80;
       double timeout = .001;
-      autoChooser.addOption("print " + count + " times in " + timeout + " seconds",
+      autoChooser.addOption("print " + count + " times in " + timeout + " seconds (nope-timeout doesn't do anything on an instant command)",
             new Autonomous5Command(count, timeout));
 //---------------------------------------------------------------------------------
-      double time = 4.;
-      autoChooser.addOption("drive straight slowly " + time + " seconds",
+      double time = 3.;
+      autoChooser.addOption("minimal move",
             new RunCommand // run repeatedly
                 (
                   driveSubsystem::DriveStraightSlowly, driveSubsystem
