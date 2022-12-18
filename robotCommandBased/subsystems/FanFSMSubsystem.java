@@ -56,12 +56,16 @@ public class FanFSMSubsystem  extends SubsystemTeam {
 
     public void writePeriodicOutputs()
     {
+      // act on (put out) data others have populated
+      System.out.println(mPeriodicIO.speed);
     } 
     
   public class PeriodicIO {
   // INPUTS
     public boolean AButtonPressed;
     public boolean BButtonPressed;
+  // OUTPUTS
+    public double speed;
   }
   /**
    * end define I/O
@@ -81,7 +85,7 @@ public class FanFSMSubsystem  extends SubsystemTeam {
     Command currentState;
     
     // the triggers (events) to change states
-    static ArrayList<Trigger> triggers = new ArrayList<Trigger>(); // easier to loop if all are in a list
+    static ArrayList<Trigger> triggers = new ArrayList<Trigger>(); // easier to loop if all are also in a list
     public NextStateTrigger nst;
     public OffStateTrigger ost;
 
@@ -142,7 +146,7 @@ public class FanFSMSubsystem  extends SubsystemTeam {
       public OffState() { addRequirements(FanFSMSubsystem.this); }
 
       @Override
-      public void execute() { System.out.println("Off"); } // refresh state as needed
+      public void execute() { mPeriodicIO.speed = 0.; } // refresh state as needed
     }    // end OffState
 
 //___________________________________________________________________________________________________________
@@ -154,7 +158,7 @@ public class FanFSMSubsystem  extends SubsystemTeam {
       public HighState() { addRequirements(FanFSMSubsystem.this); }
 
       @Override
-      public void execute() { System.out.println("High"); } // refresh state as needed
+      public void execute() { mPeriodicIO.speed = 1.; } // refresh state as needed
     }    // end HighState
 
 //___________________________________________________________________________________________________________
@@ -167,7 +171,7 @@ public class FanFSMSubsystem  extends SubsystemTeam {
       public MedState() { addRequirements(FanFSMSubsystem.this); }
 
       @Override
-      public void execute() { System.out.println("Med"); } // refresh state as needed
+      public void execute() { mPeriodicIO.speed = 0.7; } // refresh state as needed
     }    // end MedState
 
 //___________________________________________________________________________________________________________
@@ -180,7 +184,7 @@ public class FanFSMSubsystem  extends SubsystemTeam {
       public LowState() { addRequirements(FanFSMSubsystem.this); }
 
       @Override
-      public void execute() { System.out.println("Low"); } // refresh state as needed
+      public void execute() { mPeriodicIO.speed = 0.3; } // refresh state as needed
     }   // end LowState
 
 //___________________________________________________________________________________________________________
