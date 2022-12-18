@@ -13,7 +13,7 @@ public class SpinupFlywheelCommand extends CommandBase {
   }
 
   private FlywheelSubsystem flywheelSubsystem;
-  private double m_speed;
+  private double speed;
 
   // command does not run if DISABLED
   
@@ -21,22 +21,22 @@ public class SpinupFlywheelCommand extends CommandBase {
     {
       this.flywheelSubsystem = flywheelSubsystem;
       System.out.println("Spin Flywheel to speed command " + speed);
-      m_speed = speed;
+      this.speed = speed;
     }
 
     // Called when the command is initially scheduled.
     @Override
     public void initialize()
     {
-        System.out.println("SpinupFlywheel speed " + m_speed);   
+        System.out.println("SpinupFlywheel speed " + speed);   
     }
 
     // Called every time the scheduler runs while the command is scheduled.
     @Override
     public void execute()
       {
-        System.out.println("SpinupFlywheelCommand execute " + m_speed);
-        flywheelSubsystem.setFlywheelSpeed.accept(m_speed);
+        System.out.println("SpinupFlywheelCommand execute " + speed);
+        flywheelSubsystem.setFlywheelSpeed.accept(speed);
       }
     
     // Called once the command ends or is interrupted.
@@ -44,7 +44,7 @@ public class SpinupFlywheelCommand extends CommandBase {
     public void end(boolean interrupted)// interrupted true for interrupted or false if the isFinished had been set to true
       {
         System.out.println(
-          "end SpinupFlywheel speed " + m_speed + (interrupted?" interrupted":" stopped"));
+          "end SpinupFlywheel speed " + speed + (interrupted?" interrupted":" stopped"));
 
         flywheelSubsystem.setFlywheelPctVBus.accept(0.); // stop
       }
@@ -59,7 +59,7 @@ public class SpinupFlywheelCommand extends CommandBase {
 
     public SpinupFlywheelCommand spinAtSpeed(double speed)
     {
-      m_speed = speed;
+      this.speed = speed;
       return this;
     }
 }

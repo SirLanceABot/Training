@@ -19,7 +19,7 @@ import edu.wpi.first.wpilibj2.command.RunCommand;
 
 import static frc.robot.Constants.Drive.*;
 
-public class DriveSubsystem extends SubsystemTeam {
+public class DriveSubsystem extends Subsystem4237 {
   static
   {
       System.out.println("Loading: " + MethodHandles.lookup().lookupClass().getCanonicalName());

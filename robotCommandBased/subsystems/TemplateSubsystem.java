@@ -5,11 +5,11 @@ import edu.wpi.first.wpilibj2.command.CommandBase;
 import edu.wpi.first.wpilibj2.command.RunCommand;
 import edu.wpi.first.wpilibj2.command.WaitCommand;
 
-public class TemplateSubsystem  extends SubsystemTeam{
+public class TemplateSubsystem  extends Subsystem4237{
 
   public TemplateSubsystem(XboxController driverController) // pass in all the stuff this class needs from above
     {
-      mPeriodicIO = new PeriodicIO(); // all the inputs appear here
+      periodicIO = new PeriodicIO(); // all the inputs appear here
       
       this.driverController = driverController;  // example, pass in all the stuff this class needs from above
 
@@ -20,7 +20,7 @@ public class TemplateSubsystem  extends SubsystemTeam{
   public void readPeriodicInputs()
     {
         // populate each input variable
-        mPeriodicIO.dummy = System.currentTimeMillis(); // example
+        periodicIO.dummy = System.currentTimeMillis(); // example
     }
 
   @Override
@@ -32,7 +32,7 @@ public class TemplateSubsystem  extends SubsystemTeam{
   @Override
   public void periodic() {
     // This method will be called once per scheduler run
-    System.out.println(mPeriodicIO.dummy); // example
+    System.out.println(periodicIO.dummy); // example
   }
 
   @Override
@@ -43,7 +43,7 @@ public class TemplateSubsystem  extends SubsystemTeam{
   /**
    * define all the inputs to be read at once
    */
-  private PeriodicIO mPeriodicIO;
+  private PeriodicIO periodicIO;
   private XboxController driverController; // example
 
   public class PeriodicIO {

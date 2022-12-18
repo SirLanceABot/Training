@@ -6,7 +6,6 @@ import edu.wpi.first.wpilibj2.command.CommandBase;
 /** An example command that uses an example subsystem. */
 public class ExampleSubsystemDefaultCommand extends CommandBase {
 
-  private final ExampleSubsystem m_subsystem;
   private int printCount;
 
   /**
@@ -15,9 +14,8 @@ public class ExampleSubsystemDefaultCommand extends CommandBase {
    * @param subsystem The subsystem used by this command.
    */
   public ExampleSubsystemDefaultCommand(ExampleSubsystem subsystem) {
-    m_subsystem = subsystem;
     // Use addRequirements() here to declare subsystem dependencies.
-    addRequirements(m_subsystem);
+    addRequirements(subsystem);
   }
 
 /**

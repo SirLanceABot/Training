@@ -35,4 +35,12 @@ public final class Constants {
         public static final double kAutoTime = 10.;
         public static final double kDriverButtonFlywheelSpeed = 500.; // establish the shooter flywheel start/stop button at speed
     }
+
+    public class FanFSM
+    {
+        public static final double kOffSpeed = 0.0;
+        public static final double kHighSpeed = 1.0;
+        public static final double kMediumSpeed = 0.7;
+        public static final double kLowSpeed = 0.3;
+    }
 }

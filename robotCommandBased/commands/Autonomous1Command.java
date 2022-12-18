@@ -19,14 +19,14 @@ public class Autonomous1Command extends SequentialCommandGroup
   }
   
   private final TestSeqGrpCommand testSeqGrpCommand = new TestSeqGrpCommand();
-  private final FlywheelSubsystem m_flywheelSubsystem;
+  private final FlywheelSubsystem flywheelSubsystem;
   private final SpinupFlywheelCommand testit;
 
   public Autonomous1Command(FlywheelSubsystem flywheelSubsystem)
   {
-    m_flywheelSubsystem = flywheelSubsystem;
-    addRequirements(m_flywheelSubsystem); //all subsystems that might be used in any command in the group
-    testit = new SpinupFlywheelCommand(m_flywheelSubsystem, 0.);
+    this.flywheelSubsystem = flywheelSubsystem;
+    addRequirements(flywheelSubsystem); //all subsystems that might be used in any command in the group
+    testit = new SpinupFlywheelCommand(flywheelSubsystem, 0.);
   }
 
   // build command from other commands and return the single big command
@@ -34,7 +34,7 @@ public class Autonomous1Command extends SequentialCommandGroup
   {
    return new SequentialCommandGroup
         (
-          new SpinupFlywheelCommand( m_flywheelSubsystem, 300. ) .withTimeout(5.)
+          new SpinupFlywheelCommand( flywheelSubsystem, 300. ) .withTimeout(5.)
 
          ,new InstantCommand( ()->System.out.println("IC 1") )
 
@@ -55,7 +55,7 @@ public class Autonomous1Command extends SequentialCommandGroup
 
          ,new WaitCommand(2.)
          
-         ,new SpinupFlywheelCommand( m_flywheelSubsystem, 1000. ).withTimeout(6.)
+         ,new SpinupFlywheelCommand( flywheelSubsystem, 1000. ).withTimeout(6.)
 
          ,testit.spinAtSpeed(500.) .withTimeout(4.)
         );

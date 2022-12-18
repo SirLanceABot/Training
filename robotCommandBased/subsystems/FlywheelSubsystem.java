@@ -20,7 +20,7 @@ import com.ctre.phoenix.sensors.SensorVelocityMeasPeriod;
 
 //FIXME lots of constants herein should go to Constants.Flywheel class.
 
-public class FlywheelSubsystem extends SubsystemTeam {
+public class FlywheelSubsystem extends Subsystem4237 {
   static
   {
       System.out.println("Loading: " + MethodHandles.lookup().lookupClass().getCanonicalName());
@@ -31,8 +31,8 @@ public class FlywheelSubsystem extends SubsystemTeam {
   public FlywheelSubsystem(XboxController driverController)
   {
     System.out.println("construct FlywheelSubsystem");
-    createFlywheelMotorController(ParameterSetAttemptCount);
-    mPeriodicIO = new PeriodicIO(); // all the inputs appear here
+    createFlywheelMotorController(parameterSetAttemptCount);
+    periodicIO = new PeriodicIO(); // all the inputs appear here
     this.driverController = driverController; // example, pass in all the stuff this class needs from above
     printCount = 0;
   }
@@ -42,14 +42,14 @@ public class FlywheelSubsystem extends SubsystemTeam {
   {
       // populate each input variable
       SmartDashboard.putString(this.getName() + " read", "readPeriodicInputs");
-        mPeriodicIO.velocity = getFlywheelSpeed.get();
+        periodicIO.velocity = getFlywheelSpeed.get();
   }
 
   public void writePeriodicOutputs()
   {
     if(++printCount >= 50)
     {
-      SmartDashboard.putString(this.getName() + " write", mPeriodicIO.velocity + " RPM");
+      SmartDashboard.putString(this.getName() + " write", periodicIO.velocity + " RPM");
       printCount = 0;
     }
   }
@@ -67,7 +67,7 @@ public class FlywheelSubsystem extends SubsystemTeam {
   /**
   * define all the inputs to be read at once
   */
-  private PeriodicIO mPeriodicIO;
+  private PeriodicIO periodicIO;
   public XboxController driverController;
 
   public class PeriodicIO {
@@ -119,7 +119,7 @@ public class FlywheelSubsystem extends SubsystemTeam {
 
   // TalonFX magic numbers
   double nativeToRPM = 10. * 60. / 2048.; // 10 .1sec/sec   60 secs/min   rev/2048 encoder ticks for Integrated Sensor
-  double PctVBusToThrottle = 1023.; // 1023 talon throttle unit / 100%VBus
+  double pctVBusToThrottle = 1023.; // 1023 talon throttle unit / 100%VBus
 
   // TalonFX flywheelMotorFollower;
   TalonFX flywheelMotor;
@@ -136,7 +136,7 @@ public class FlywheelSubsystem extends SubsystemTeam {
   double speed = 0.; //initial speed to run and display on SmartDashboard
   // It seemed that sometimes a previous value from the SmartDashboard is used (race condition?).
   // This code tries hard to prevent but not sure it's perfect or what the issue was.
-  int ParameterSetAttemptCount = 5; // retry flywheel config if error
+  int parameterSetAttemptCount = 5; // retry flywheel config if error
 
   /**
    * create the flywheel motor controller
@@ -315,7 +315,7 @@ public class FlywheelSubsystem extends SubsystemTeam {
         SmartDashboard.putNumber("velocity measured (RPM)", getFlywheelSpeed.get() * nativeToRPM);
         SmartDashboard.putNumber("error (native units)", getSpeedError.get());
         SmartDashboard.putNumber("error (RPM)", getSpeedError.get() * nativeToRPM);
-        SmartDashboard.putNumber("kF tentative", PctVBusToThrottle *
+        SmartDashboard.putNumber("kF tentative", pctVBusToThrottle *
             (isVoltageCompensationEnabled.get() ? getBusVoltage.get() / voltageCompensation : 1.) * // voltage compensation correction factor
              getPctOutput.get() / getFlywheelSpeed.get() );
         SmartDashboard.putNumber("%VBus", getPctOutput.get());

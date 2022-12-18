@@ -286,9 +286,9 @@ class RobotContainer {
           new SpinupFlywheelCommand(flywheelSubsystem, kDriverButtonFlywheelSpeed)
         ) );
 //---------------------------------------------------------------------------------
-// The FanFSMSubsystem and FanFSMCommand demonstrate traditional usage of getting
-// the status of a button with all the other PeriodIO values and using that value
-// in the Fan FSM. Those bindings are not established here in RobotContainer.
+// The FanFSMSubsystem demonstrates traditional usage of getting the status of a
+// button with all the other PeriodIO values and using that value in the Fan FSM.
+// Those bindings are not established here in RobotContainer.
 //---------------------------------------------------------------------------------
   }
 

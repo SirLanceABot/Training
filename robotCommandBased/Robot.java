@@ -7,7 +7,8 @@ import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.livewindow.LiveWindow;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
-import frc.robot.subsystems.SubsystemTeam;
+
+import frc.robot.subsystems.Subsystem4237;
 
 //FIXME  comment from CD
 /*
@@ -27,8 +28,8 @@ class Robot extends TimedRobot {
       System.out.println("Loading: " + MethodHandles.lookup().lookupClass().getCanonicalName());
   }
 
-  private Command m_autonomousCommand;
-  private RobotContainer m_robotContainer;
+  private Command autonomousCommand;
+  private RobotContainer robotContainer;
   
   Robot()
   {
@@ -43,7 +44,7 @@ class Robot extends TimedRobot {
   public void robotInit() {
     // Instantiate our RobotContainer.  This will perform all our button bindings, and put our
     // autonomous chooser on the dashboard.
-    m_robotContainer = new RobotContainer();
+    robotContainer = new RobotContainer();
   }
 
   /**
@@ -62,9 +63,9 @@ class Robot extends TimedRobot {
   public void robotPeriodic() 
   {
     // System.out.println("robotPeriodic");System.out.flush();
-    SubsystemTeam.readPeriodic();
+    Subsystem4237.readPeriodic();
     CommandScheduler.getInstance().run();
-    SubsystemTeam.writePeriodic();
+    Subsystem4237.writePeriodic();
   }
 
   /** This function is called once each time the robot enters Disabled mode. */
@@ -82,12 +83,12 @@ class Robot extends TimedRobot {
   /** This autonomous runs the autonomous command selected by your {@link RobotContainer} class. */
   @Override
   public void autonomousInit() {
-    m_autonomousCommand = m_robotContainer.getAutonomousCommand(); 
+    autonomousCommand = robotContainer.getAutonomousCommand(); 
 
-    if(m_autonomousCommand != null)
+    if(autonomousCommand != null)
     {
       System.out.println("scheduling autocommand");
-      m_autonomousCommand.schedule();
+      autonomousCommand.schedule();
     }
   }
 
@@ -98,9 +99,9 @@ class Robot extends TimedRobot {
     // teleop starts running. If you want the autonomous to
     // continue until interrupted by another command, remove
     // this line or comment it out.
-    if (m_autonomousCommand != null) {
+    if (autonomousCommand != null) {
         System.out.println("auto exit command not null");
-        m_autonomousCommand.cancel();
+        autonomousCommand.cancel();
     }
   }
   

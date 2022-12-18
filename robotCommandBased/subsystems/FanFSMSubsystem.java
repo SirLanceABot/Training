@@ -16,7 +16,9 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandBase;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 
-public class FanFSMSubsystem  extends SubsystemTeam {
+import static frc.robot.Constants.FanFSM.*;
+
+public class FanFSMSubsystem  extends Subsystem4237 {
   static
   {
       System.out.println("Loading: " + MethodHandles.lookup().lookupClass().getCanonicalName());
@@ -146,7 +148,7 @@ public class FanFSMSubsystem  extends SubsystemTeam {
       public OffState() { addRequirements(FanFSMSubsystem.this); }
 
       @Override
-      public void execute() { mPeriodicIO.speed = 0.; } // refresh state as needed
+      public void execute() { mPeriodicIO.speed = kOffSpeed; } // refresh state as needed
     }    // end OffState
 
 //___________________________________________________________________________________________________________
@@ -158,7 +160,7 @@ public class FanFSMSubsystem  extends SubsystemTeam {
       public HighState() { addRequirements(FanFSMSubsystem.this); }
 
       @Override
-      public void execute() { mPeriodicIO.speed = 1.; } // refresh state as needed
+      public void execute() { mPeriodicIO.speed = kHighSpeed; } // refresh state as needed
     }    // end HighState
 
 //___________________________________________________________________________________________________________
@@ -171,7 +173,7 @@ public class FanFSMSubsystem  extends SubsystemTeam {
       public MedState() { addRequirements(FanFSMSubsystem.this); }
 
       @Override
-      public void execute() { mPeriodicIO.speed = 0.7; } // refresh state as needed
+      public void execute() { mPeriodicIO.speed = kMediumSpeed; } // refresh state as needed
     }    // end MedState
 
 //___________________________________________________________________________________________________________
@@ -184,7 +186,7 @@ public class FanFSMSubsystem  extends SubsystemTeam {
       public LowState() { addRequirements(FanFSMSubsystem.this); }
 
       @Override
-      public void execute() { mPeriodicIO.speed = 0.3; } // refresh state as needed
+      public void execute() { mPeriodicIO.speed = kLowSpeed; } // refresh state as needed
     }   // end LowState
 
 //___________________________________________________________________________________________________________
@@ -315,7 +317,7 @@ public class FanFSMSubsystem  extends SubsystemTeam {
   public String dumpFSM()
   {
     StringBuilder sb = new StringBuilder(500);
-    sb.append("\nTransitions\nFrom State   +   Event   ->   Next State\n");
+    sb.append("\nFan FSM Transition Table\nFrom State   +   Event   ->   Next State\n");
     for (Transition transition : transitions)
     {
       sb.append( String.format("%-12s + %-12s -> %-12s\n",
