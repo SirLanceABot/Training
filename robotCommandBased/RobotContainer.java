@@ -47,9 +47,7 @@ class RobotContainer {
   {
       System.out.println("Loading: " + MethodHandles.lookup().lookupClass().getCanonicalName());
   }
- 
-  static boolean yes = true; // don't use final because that cancels the purpose of eliminating dead code messages
-  static boolean no  = false;
+
 //_________________________________________________________________________________
 //
 //____________________   USER SELECTABLE COMPONENTS  ______________________________
@@ -66,7 +64,7 @@ class RobotContainer {
 // activate or not selected subsystems
 // activate or not selected subsystems
 
-  private boolean useFullRobot       = true; // true implies all the rest are true
+  private boolean useFullRobot       = true; // true implies all the rest are true; don't use "final" to prevent dead code messages
   private boolean useDrive           = false;
   private boolean useFlywheel        = false;
   private boolean useExample         = false;
