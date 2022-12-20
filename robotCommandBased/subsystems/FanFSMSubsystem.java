@@ -349,7 +349,7 @@ public void simulationPeriodic() {
   public String dumpFSM()
   {
     StringBuilder sb = new StringBuilder(500);
-    sb.append("\nFSM Transition Table\nFrom State   +   Event   ->   Next State\n");
+    sb.append("\nFSM Transition Table for " + this.getClass().getSimpleName() + "\nFrom State   +   Event   ->   Next State\n");
     for (Transition transition : transitions)
     {
       sb.append( String.format("%-12s + %-12s -> %-12s\n",
