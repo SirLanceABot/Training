@@ -8,8 +8,8 @@ import edu.wpi.first.wpilibj.livewindow.LiveWindow;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 
+import static frc.robot.RobotContainer.AutoChoice;
 import frc.robot.subsystems.Subsystem4237;
-import static frc.robot.Constants.AutoChoice;
 
 // order of execution: previous_modeExit, modeInit, modePeriodic, robotPeriodic
 

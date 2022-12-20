@@ -17,11 +17,6 @@ public final class Constants {
     }
     public static final int driverControllerID = 0;
 
-    public static enum AutoChoice
-    {
-         kAuto1, kAuto2, kAuto3, kAuto4, kAuto5, kAuto6, kAuto7, kAuto8
-    }
-
     public static class Drive
     {
         public static final double autoMinimalMoveTime = 3.;

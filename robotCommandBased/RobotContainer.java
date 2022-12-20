@@ -2,7 +2,6 @@ package frc.robot;
 
 import static frc.robot.Constants.driverControllerID;
 import static frc.robot.Constants.Drive.autoMinimalMoveTime;
-import static frc.robot.Constants.AutoChoice;
 import static frc.robot.Constants.Flywheel.*;
 
 import java.lang.invoke.MethodHandles;
@@ -142,6 +141,12 @@ private final XboxController driverController = new XboxController(driverControl
 /////////////////////////////////////////
 // AUTONOMOUS COMMANDS
 /////////////////////////////////////////
+
+  public static enum AutoChoice
+  {
+      kAuto1, kAuto2, kAuto3, kAuto4, kAuto5, kAuto6, kAuto7, kAuto8
+  }
+
   private void configureAutoChooser()
   {
     //_________________________________________________________________________________
