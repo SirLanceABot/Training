@@ -12,6 +12,7 @@ import java.util.ArrayList;
 
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.XboxController;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandBase;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
@@ -41,7 +42,8 @@ public class FanFSMSubsystem  extends Subsystem4237 {
     public void writePeriodicOutputs()
     {
       // act on (put out) data others have populated
-      System.out.println(periodicIO.speed);
+      // System.out.println(periodicIO.speed);
+      SmartDashboard.putNumber("fan speed", periodicIO.speed);
     } 
     
   public class PeriodicIO {

@@ -16,8 +16,13 @@ public final class Constants {
         System.out.println("Loading: " + MethodHandles.lookup().lookupClass().getCanonicalName());
     }
     public static final int driverControllerID = 0;
-    
-    public class Drive
+
+    public static enum AutoChoice
+    {
+         kAuto1, kAuto2, kAuto3, kAuto4, kAuto5, kAuto6, kAuto7, kAuto8
+    }
+
+    public static class Drive
     {
         public static final double autoMinimalMoveTime = 3.;
         public static final int testMotorPort = 3; // SparkMax CAN id
@@ -29,14 +34,14 @@ public final class Constants {
         public static final double DriveStraightSlowlySpeed = 0.25;
     }
 
-    public class Flywheel
+    public static class Flywheel
     {
         public static final double kAutoSpinupRPM = 600.;
         public static final double kAutoTime = 10.;
         public static final double kDriverButtonFlywheelSpeed = 500.; // establish the shooter flywheel start/stop button at speed
     }
 
-    public class FanFSM
+    public static class FanFSM
     {
         public static final double kOffSpeed = 0.0;
         public static final double kHighSpeed = 1.0;

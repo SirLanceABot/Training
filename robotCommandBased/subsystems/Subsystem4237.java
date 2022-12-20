@@ -1,5 +1,6 @@
 /**
- * define method to read all inputs at once (well, sequentially) for all registered SubsystemTeam
+ * Define methods to read all inputs at once (well, sequentially) and
+ * similarly write all outputs at once for all registered Subsystem4237
  */
 package frc.robot.subsystems;
 

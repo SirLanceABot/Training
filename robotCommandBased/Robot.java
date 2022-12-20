@@ -9,16 +9,7 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 
 import frc.robot.subsystems.Subsystem4237;
-
-//FIXME  comment from CD
-/*
-FWIW, a good way to initialize motors is to do this via a state machine,
-one config call per iteration of Periodic(). You can also check to see 
-if the controller has rebooted, and restart the state machine if this occurs.
-From your description, you may be maxing out CAN bandwidth, triggering
-errors on some of the configuration calls. Once you start hitting error
-paths, odds of something unusual happening are higher.
-*/
+import static frc.robot.Constants.AutoChoice;
 
 // order of execution: previous_modeExit, modeInit, modePeriodic, robotPeriodic
 
@@ -29,6 +20,7 @@ class Robot extends TimedRobot {
   }
 
   private Command autonomousCommand;
+  private AutoChoice autoChoicePrevious;
   private RobotContainer robotContainer;
   
   Robot()
@@ -62,32 +54,41 @@ class Robot extends TimedRobot {
   @Override
   public void robotPeriodic() 
   {
-    // System.out.println("robotPeriodic");System.out.flush();
-    Subsystem4237.readPeriodic();
-    CommandScheduler.getInstance().run();
-    Subsystem4237.writePeriodic();
+    Subsystem4237.readPeriodic();         // 1st
+    CommandScheduler.getInstance().run(); // 2nd
+    Subsystem4237.writePeriodic();        // 3rd
   }
 
   /** This function is called once each time the robot enters Disabled mode. */
   @Override
   public void disabledInit()
   {
+    autoChoicePrevious = null; // force refreshing the auto command every time robot disabled from another mode
     // Cancels all running commands.
-    DriverStation.reportWarning("Canceling all commands in Disabled", false);
+    DriverStation.reportWarning("Canceling all scheduled commands in Disabled", false);
     CommandScheduler.getInstance().cancelAll(); // be careful - there might be something you want to keep running
   }
 
   @Override
-  public void disabledPeriodic() { }
+  public void disabledPeriodic()
+  {
+    // test auto that is similar but not identical to how the real robot code will work
+    // get the auto choice
+    var autoChoice = robotContainer.getAutoChoice(); // what auto has been selected
+    if (autoChoice != autoChoicePrevious) // if it has changed then get the new command for the new selection
+    {
+      autonomousCommand = robotContainer.getAutonomousCommand(autoChoice);
+      DriverStation.reportWarning( "selected autonomous command " + autoChoice, false );
+      autoChoicePrevious = autoChoice; // reset the previous choice to the new choice    
+    }
+  }
 
   /** This autonomous runs the autonomous command selected by your {@link RobotContainer} class. */
   @Override
   public void autonomousInit() {
-    autonomousCommand = robotContainer.getAutonomousCommand(); 
-
+    System.out.println("autonomousInit");
     if(autonomousCommand != null)
     {
-      System.out.println("scheduling autocommand");
       autonomousCommand.schedule();
     }
   }
@@ -100,7 +101,6 @@ class Robot extends TimedRobot {
     // continue until interrupted by another command, remove
     // this line or comment it out.
     if (autonomousCommand != null) {
-        System.out.println("auto exit command not null");
         autonomousCommand.cancel();
     }
   }

@@ -227,7 +227,7 @@ public class DriveSubsystem extends Subsystem4237 {
     }
     // could get faults and getStickyfaults here
     return rc == REVLibError.kOk ? 0 : 1;
-  }
+  }// You can also check to see if the controller has rebooted and refresh configs that may have been lost
 
   public void DriveStraightSlowly()
   {
@@ -240,7 +240,6 @@ public class DriveSubsystem extends Subsystem4237 {
     System.out.println("set motor off");
     setTestMotorPctVBus.accept(0.);
   }
-
   
   public Command joystickDriveCommand()
       { 

@@ -345,5 +345,5 @@ public class FlywheelSubsystem extends Subsystem4237 {
       System.out.println("[Talon] " + message + " " + rc);
     }
     return rc == ErrorCode.OK ? 0 : 1;
-  }
+  }// You can also check to see if the controller has rebooted and refresh configs that may have been lost
 }

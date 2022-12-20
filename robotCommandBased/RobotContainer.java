@@ -1,7 +1,15 @@
 package frc.robot;
 
+import static frc.robot.Constants.driverControllerID;
+import static frc.robot.Constants.Drive.autoMinimalMoveTime;
+import static frc.robot.Constants.AutoChoice;
+import static frc.robot.Constants.Flywheel.*;
+
 import java.lang.invoke.MethodHandles;
 
+import edu.wpi.first.util.datalog.DataLog;
+import edu.wpi.first.util.datalog.StringLogEntry;
+import edu.wpi.first.wpilibj.DataLogManager;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.PowerDistribution;
 import edu.wpi.first.wpilibj.XboxController;
@@ -9,9 +17,6 @@ import edu.wpi.first.wpilibj.shuffleboard.EventImportance;
 import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
-import edu.wpi.first.wpilibj.DataLogManager;
-import edu.wpi.first.util.datalog.DataLog;
-import edu.wpi.first.util.datalog.StringLogEntry;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
@@ -31,10 +36,6 @@ import frc.robot.subsystems.ExampleSubsystem;
 import frc.robot.subsystems.FanFSMSubsystem;
 import frc.robot.subsystems.FlywheelSubsystem;
 
-import static frc.robot.Constants.Drive.*;
-import static frc.robot.Constants.Flywheel.*;
-import static frc.robot.Constants.*;
-
 /**
  * This class is where the bulk of the robot should be declared. Since Command-based is a
  * "declarative" paradigm, very little robot logic should actually be handled in the {@link Robot}
@@ -48,26 +49,33 @@ class RobotContainer {
   }
  
   static boolean yes = true; // don't use final because that cancels the purpose of eliminating dead code messages
-  static boolean no = false;
+  static boolean no  = false;
+//_________________________________________________________________________________
+//
+//____________________   USER SELECTABLE COMPONENTS  ______________________________
+//_________________________________________________________________________________
 
 // activate or not debug logging
 // activate or not debug logging
 // activate or not debug logging
 
-  private final boolean useDataLog = yes; // this uses space on roboRIO which runs out after some time of logging
-  private final boolean useShuffleBoardLog = yes; // record a ShuffleBoard session then convert playback
+  private boolean useDataLog         = false; // this uses space on roboRIO which runs out after some time of logging
+  private boolean useShuffleBoardLog = false; // record a ShuffleBoard session then you convert playback to view
 
 // activate or not selected subsystems
 // activate or not selected subsystems
 // activate or not selected subsystems
 
-  private final boolean useFullRobot        = yes; // includes using autonomous chooser commands
-  private final boolean useDrive            = no;
-  private final boolean useFlywheel         = no;
-  private final boolean useExample          = no;
-  private final boolean useFanFSM           = no;
+  private boolean useFullRobot       = true; // true implies all the rest are true
+  private boolean useDrive           = false;
+  private boolean useFlywheel        = false;
+  private boolean useExample         = false;
+  private boolean useFanFSM          = false;
+//_________________________________________________________________________________
+//_________________________________________________________________________________
+//_________________________________________________________________________________
 
-  private final XboxController driverController = new XboxController(driverControllerID);
+private final XboxController driverController = new XboxController(driverControllerID);
   // private final ArrayList<SubsystemTeam> m_subsystemArrayList = new ArrayList<SubsystemTeam>();
 
   /////////////////////////////////////////
@@ -78,7 +86,7 @@ class RobotContainer {
   private final FlywheelSubsystem flywheelSubsystem;
   private final FanFSMSubsystem fanFSMSubsystem;
 
-  private final SendableChooser<Command> autoChooser;
+  private final SendableChooser<AutoChoice> autoChooser;
 
 
   // WPILog
@@ -103,15 +111,10 @@ class RobotContainer {
     driveSubsystem    = (useFullRobot || useDrive    ? new DriveSubsystem(driverController)    : null);
     flywheelSubsystem = (useFullRobot || useFlywheel ? new FlywheelSubsystem(driverController) : null);
     fanFSMSubsystem   = (useFullRobot || useFanFSM   ? new FanFSMSubsystem(driverController)   : null);
-
-    autoChooser       = (useFullRobot                ? new SendableChooser<Command>()          : null);
-
-    // display all the auto choices on the SmartDashboard
-    if(autoChooser != null)
-    {
-      configureAutoChooser();
-    }
-
+    
+    // autonomous component
+    autoChooser       = (useFullRobot                ? new SendableChooser<AutoChoice>()       : null);
+  
     // clear faults, etc.
     resetRobot();
     
@@ -123,6 +126,9 @@ class RobotContainer {
 
     // Configure the default commands for all subsystems
     configDefaultSubsystemCommands();
+
+    // display the autonomous command selector
+    configureAutoChooser();
   }
 
   /**
@@ -138,78 +144,121 @@ class RobotContainer {
 /////////////////////////////////////////
 // AUTONOMOUS COMMANDS
 /////////////////////////////////////////
-  /**
-   * Method to configure the chooser for the Autonomous Selection
-   */
   private void configureAutoChooser()
   {
-    // autonomous commands and the subsystems each command requires
-    // note that instantiating objects here means that are all instantiated at this point
-    // watch out for side effects that take place.
-    // To defer instantiation until later then use the String autoChooser instead of Object
+    //_________________________________________________________________________________
 
-    // Generally the use of constants and decorators here is discouraged.
-    // Put the whole auto program command in the class and not dribble out parts of it here.
-    // Some bad examples below and some good examples.
-//---------------------------------------------------------------------------------
-      autoChooser.addOption("Auto 1",
-            new Autonomous1Command(flywheelSubsystem).get());
-//---------------------------------------------------------------------------------
-      autoChooser.addOption("Auto 2",
-            new Autonomous2Command(flywheelSubsystem).get());
-//---------------------------------------------------------------------------------
-      autoChooser.addOption("Spinup Flywheel to " + Constants.Flywheel.kAutoSpinupRPM
-                          + " RPM for " + Constants.Flywheel.kAutoTime + " seconds",
-            new SpinupFlywheelCommand(flywheelSubsystem, Constants.Flywheel.kAutoSpinupRPM)
-            .withTimeout(Constants.Flywheel.kAutoTime));
-//---------------------------------------------------------------------------------
-      autoChooser.addOption("Auto 3",
-            new Autonomous3Command(driveSubsystem, flywheelSubsystem));
-//---------------------------------------------------------------------------------
-      autoChooser.addOption("Auto 4",
-            new Autonomous4Command(10000).withTimeout(2.5));
-//---------------------------------------------------------------------------------
-      int count = 80;
-      double timeout = .001;
-      autoChooser.addOption("print " + count + " times in " + timeout + " seconds (nope-timeout doesn't do anything on an instant command)",
-            new Autonomous5Command(count, timeout));
-//---------------------------------------------------------------------------------
-      autoChooser.addOption("minimal move",
-            new RunCommand // run repeatedly
-                (
-                  driveSubsystem::DriveStraightSlowly, driveSubsystem
-                )
-            .withTimeout(autoMinimalMoveTime)
-            .andThen(driveSubsystem::DriveStop, driveSubsystem) // only executed once; make RunCommand to multi-execute
-            .andThen(driveSubsystem::DriveStop, driveSubsystem) // only executed once; make RunCommand to multi-execute
-            .andThen(driveSubsystem::DriveStop, driveSubsystem) // only executed once; make RunCommand to multi-execute
-                                                                // or duplicate the individuals a few times to make sure it stops
-            );
-//---------------------------------------------------------------------------------
-      autoChooser.setDefaultOption("Auto None - ERROR",
-            new InstantCommand
-              (
-                ()->
-                {
-                  var message = "No autonomous command set";
-                  DriverStation.reportWarning(message, true);
-                }
-                /*no other subsystems required to display the message*/
-              )
-            );
-//---------------------------------------------------------------------------------
-      SmartDashboard.putData("Auto choices", autoChooser);
-//---------------------------------------------------------------------------------
+    autoChooser.addOption( "Auto 1", AutoChoice.kAuto1);        
+    //_________________________________________________________________________________
+
+    autoChooser.addOption( "Auto 2", AutoChoice.kAuto2 );
+    //_________________________________________________________________________________
+
+    autoChooser.addOption( "Spinup Flywheel to " + kAutoSpinupRPM
+                 + " RPM for " + kAutoTime + " seconds", AutoChoice.kAuto3 );
+    //_________________________________________________________________________________
+
+    autoChooser.addOption("Auto 3", AutoChoice.kAuto4 );
+    //_________________________________________________________________________________
+
+    autoChooser.addOption("Auto 4", AutoChoice.kAuto5 );
+    //_________________________________________________________________________________
+
+    int count = 80; //FIXME redundant - put in Constants
+    double timeout = .001;
+    autoChooser.addOption("print " + count + " times in " + timeout +
+         " seconds (nope-timeout doesn't do anything on an instant command)", AutoChoice.kAuto6 );
+    //_________________________________________________________________________________
+
+    autoChooser.addOption("minimal move", AutoChoice.kAuto7 );
+    //_________________________________________________________________________________
+
+    autoChooser.setDefaultOption("Auto None", AutoChoice.kAuto8 );
+    //_________________________________________________________________________________
+
+    SmartDashboard.putData("Auto choices", autoChooser);
+    //_________________________________________________________________________________
+  }
+
+  /**
+   * Get autonomous selection from user
+   * @return user selected autonomous choice
+   */
+  AutoChoice getAutoChoice ()
+  {
+    return autoChooser.getSelected();
   }
 
   /**
    * Use this to pass the autonomous command to the main {@link Robot} class.
+   * This turns the user choice into a Command to be scheduled
    *
    * @return the command to run in autonomous
    */
-  Command getAutonomousCommand()
+  Command getAutonomousCommand(AutoChoice autoChoice)
   {
-    return autoChooser == null ? null : autoChooser.getSelected();
+    Command autoCommand;
+
+    switch(autoChoice)
+    {
+      case kAuto1:
+                  autoCommand = new Autonomous1Command(flywheelSubsystem).get();
+                  break;
+
+      case kAuto2:
+                  autoCommand = new Autonomous2Command(flywheelSubsystem).get();
+                  break;
+
+      case kAuto3:
+                  autoCommand =  new SpinupFlywheelCommand(flywheelSubsystem, kAutoSpinupRPM)
+                    .withTimeout(kAutoTime);
+                  break;
+
+      case kAuto4:
+                  autoCommand = new Autonomous3Command(driveSubsystem, flywheelSubsystem);
+                  break;
+
+      case kAuto5:
+                  autoCommand = new Autonomous4Command(100, driveSubsystem, flywheelSubsystem);
+                  break;
+
+      case kAuto6:
+                  int count = 80;
+                  double timeout = .001; // timeout not used on InstantCommand
+                  autoCommand =  new Autonomous5Command(count, timeout);
+                  break;
+
+      case kAuto7:
+                  autoCommand = new RunCommand // run repeatedly
+                    (
+                      driveSubsystem::DriveStraightSlowly, driveSubsystem
+                    )
+                    .withTimeout(autoMinimalMoveTime)
+                    .andThen(driveSubsystem::DriveStop, driveSubsystem) // only executed once; make RunCommand to multi-execute
+                    .andThen(driveSubsystem::DriveStop, driveSubsystem) // only executed once; make RunCommand to multi-execute
+                    .andThen(driveSubsystem::DriveStop, driveSubsystem);// only executed once; make RunCommand to multi-execute
+                                                                        // or duplicate the individuals a few times to make sure it stops
+                  break;
+
+      case kAuto8:
+                  autoCommand =  new InstantCommand
+                  (
+                    ()->
+                    {
+                      var message = "No autonomous command set";
+                      DriverStation.reportWarning(message, false);
+                    }
+                    /*no other subsystems required to display the message*/
+                  );
+                  break;
+        
+      default:
+                  DriverStation.reportError("UNKNOWN AUTO COMMAND SELECTED - NONE USED", false);
+                  autoCommand = null;
+                  break;
+    }
+
+    return autoCommand;
   }
 /////////////////////////////////////////
 // end AUTONOMOUS COMMANDS
@@ -229,6 +278,8 @@ class RobotContainer {
     // If ShuffleBoard is recording these events are added to the recording. Convert
     // recording to csv and they show nicely in Excel. 
     // If using data log tool, the recording is automatic so run that tool to retrieve and convert the log.
+    //_________________________________________________________________________________
+
     CommandScheduler.getInstance()
         .onCommandInitialize(
             command ->
@@ -238,6 +289,8 @@ class RobotContainer {
                   "Command initialized", command.getName(), EventImportance.kNormal);
             }
         );
+    //_________________________________________________________________________________
+
     CommandScheduler.getInstance()
         .onCommandInterrupt(
             command ->
@@ -247,6 +300,8 @@ class RobotContainer {
                     "Command interrupted", command.getName(), EventImportance.kNormal);
             }
         );
+    //_________________________________________________________________________________
+
     CommandScheduler.getInstance()
         .onCommandFinish(
             command ->
@@ -256,7 +311,8 @@ class RobotContainer {
                     "Command finished", command.getName(), EventImportance.kNormal);
             }
         );
-    
+    //_________________________________________________________________________________
+
     CommandScheduler.getInstance()
         .onCommandExecute( // this can generate a lot of events
             command ->
@@ -266,18 +322,20 @@ class RobotContainer {
                     "Command executed", command.getName(), EventImportance.kNormal);
             }
         );
+    //_________________________________________________________________________________
     }
   }
 
-  ////////////////////////////////////////////////////////////////////////////////
-  ///////    BUTTONS    //////////////////////////////////////////////////////////
-  ////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+///////    BUTTONS    //////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
   /**
    * Configure teleop driver/operator controls - at least in part; others may be elsewhere
    */
   private void configureButtonBindings()
   {
-//---------------------------------------------------------------------------------
+//_________________________________________________________________________________
+
     new JoystickButton(driverController, XboxController.Button.kX.value)
       .toggleWhenActive( // 1st press starts command; 2nd press interrupts command
         new SequentialCommandGroup
@@ -285,33 +343,36 @@ class RobotContainer {
           new InstantCommand( ()-> System.out.println("toggle X button flywheel")),
           new SpinupFlywheelCommand(flywheelSubsystem, kDriverButtonFlywheelSpeed)
         ) );
-//---------------------------------------------------------------------------------
+//_________________________________________________________________________________
 // The FanFSMSubsystem demonstrates traditional usage of getting the status of a
 // button with all the other PeriodIO values and using that value in the Fan FSM.
 // Those bindings are not established here in RobotContainer.
-//---------------------------------------------------------------------------------
+//_________________________________________________________________________________
   }
 
-  ////////////////////////////////////////////////////////////////////////////////
-  ///////    DEFAULT COMMANDS    /////////////////////////////////////////////////
-  ////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+///////    DEFAULT COMMANDS    /////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
   private void configDefaultSubsystemCommands()
   {
+//_________________________________________________________________________________
+
     driveSubsystem.setDefaultCommand( driveSubsystem.joystickDriveCommand() );
+//_________________________________________________________________________________
 
     exampleSubsystem.setDefaultCommand( new ExampleSubsystemDefaultCommand(exampleSubsystem) );
+//_________________________________________________________________________________
   }
 }
 
 // CommandGroupBase.clearGroupedCommands();
-
 
 // If command already exists and in case a different command is requested after the first time through,
 // can't reuse grouped commands without first ungrouping them.
 // CommandGroupBase.clearGroupedCommand(m_autonomousCommand);
 // or ungroup them all with CommandGroupBase.clearGroupedCommands
 // CommandGroupBase.clearGroupedCommand(m_autonomousCommand);
-//-----------------------------------------------------------------------------------------------------------
+//_________________________________________________________________________________--------------------------
 // Instead of using the WPILib JoystickButton you can make your own class that extends Button.
 // Then you make a get() method that returns the joystick value like below.
 // You could then get the joystick value in the PeriodicIO if you want.
