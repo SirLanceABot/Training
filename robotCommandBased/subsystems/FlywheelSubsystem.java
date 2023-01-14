@@ -30,7 +30,6 @@ public class FlywheelSubsystem extends Subsystem4237 {
 
   public FlywheelSubsystem(XboxController driverController)
   {
-    System.out.println("construct FlywheelSubsystem");
     createFlywheelMotorController(parameterSetAttemptCount);
     periodicIO = new PeriodicIO(); // all the inputs appear here
     this.driverController = driverController; // example, pass in all the stuff this class needs from above
@@ -41,19 +40,21 @@ public class FlywheelSubsystem extends Subsystem4237 {
   public void readPeriodicInputs()
   {
       // populate each input variable
-      SmartDashboard.putString(this.getName() + " read", "readPeriodicInputs");
         periodicIO.velocity = getFlywheelSpeed.get();
+        periodicIO.PctOutput = getPctOutput.get();
   }
 
+  @Override
   public void writePeriodicOutputs()
   {
-    if(++printCount >= 50)
+    if(++printCount >= 25)
     {
-      SmartDashboard.putString(this.getName() + " write", periodicIO.velocity + " RPM");
+      SmartDashboard.putNumber(this.getName() + " RPM", periodicIO.velocity);
+      SmartDashboard.putNumber(this.getName() + " %output", periodicIO.PctOutput);
       printCount = 0;
     }
   }
-  
+
    @Override
   public void periodic() {
   // This method will be called once per scheduler run
@@ -73,6 +74,7 @@ public class FlywheelSubsystem extends Subsystem4237 {
   public class PeriodicIO {
     // INPUTS
     public double velocity;
+    public double PctOutput;
   }
   /**
   * end define inputs

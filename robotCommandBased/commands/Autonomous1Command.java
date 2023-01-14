@@ -277,3 +277,172 @@ public class Autonomous1Command extends SequentialCommandGroup
 //       );
 //   }
 // }
+
+// ////////////////////////////////////
+// joystickButtons1[1].toggleWhenPressed(
+//         new ConditionalCommand(
+//             new ParallelCommandGroup(
+//                 new InstantCommand(() -> collector.disableCollector(), collector),
+//                 new InstantCommand(() -> storage.disableStorage(), storage),
+//                 new InstantCommand(() -> flywheel.stopFlywheel(), flywheel)),
+//             new SequentialCommandGroup(
+//                 new InstantCommand(() -> collector.enableCollector(), collector),
+//                 new SortStorageCommand(storage),
+//                 new InstantCommand(() -> collector.disableCollector(), collector),
+//                 new SetFlywheelVelocityCommand(flywheel, FlywheelConstants.WALL_SHOT_VELOCITY)),
+//             collector::isEnabled));
+
+// ///////////////////////////////////
+
+
+// public StartEndCommand clawdownCommand = new StartEndCommand(
+//     () -> arm.runarm(0.2),
+//     () -> arm.stoparm(),
+//   arm);
+
+// //////////////////////////////////////
+
+/*
+
+prensing
+
+Yes, I get it, at least partly. But what I missed in my description is that, after the first few obvious commands like “drive” and “run intake”, all the interesting commands involve 2-3 subsystems and, even more challenging, have data values which need to go from one subcommand to another during the command.
+
+So, for a simple example, a shooting command will first run the vision system to get a target lock, then feed the (conditioned?) angle to the drivetrain to turn to the target, and the distance to the shooter to set the speed. I really don’t see a clean way to move that data around from one command to another while running, apart from stashing it in a subsystem (which feels ugly), or having the subsequent commands re-fetch/compute values (which might be in different state!). Is there a clean example which does this kind of stateful progression?
+Oblarg
+
+Is there a clean example which does this kind of stateful progression?
+
+Yes and no.
+
+As you say, the Command-based composition model doesn’t explicitly support data-passing from one command to another. There have been some ideas banged-about for explicitly supporting this within the context of the decorator composition model - it’s tempting to imagine turning the Command lifecycle callbacks into argumented methods with a State variable, and propagating that state to subsequent commands through some defined addition to the Command API.
+
+Unfortunately, trying to implement such a thing rapidly runs into limitations of the Java type system (in particular it has a very hard time representing the type of our supposed State variable). There’s unlikely to ever be a strict solution in this sense, unless we move to a language with a much more powerful type system (C++ may be able to do its own thing here, but the template hackery would probably be awful).
+
+A more feasible solution is to declare command state as method locals inside of a factory method that returns a command constructed via inline syntax, with the inline functions capturing the state variables. In C++ this works just fine, but in Java it runs problems with the “effectively final” limitation on lambda captures. This can be circumvented by placing state primitives in wrapper classes (arrays are a common hack, though any mutable data structure will do), or by writing accessor methods for them and capturing calls to those instead. At this point we’re not really saving on verbosity for a single command definition anymore, but we may still be reducing code duplication by staying within a composition model - and if a factory class provides factory methods for multiple related command types, some of the boilerplate can be shared.
+
+Unfortunately, Java is rigid and verbose. You have to pick between the rigid verbosity of its subclassing rules, or the rigid verbosity of its functional APIs.
+
+As a final note, I want to object slightly to this characterization:
+
+all the interesting commands involve 2-3 subsystems and, even more challenging, have data values which need to go from one subcommand to another during the command.
+
+It’s true that stateful commands are challenging. I think this is a good reason to try as hard as possible to avoid stateful commands except where absolutely necessary. A lot of “interesting” commands don’t really need transient state to work well, and the apparent need for it can often be satisfied by improving the state management of the rest of the robot (e.g. so that it is robust/consistent when repeatedly queried during a single scheduler iteration).
+
+Sometimes you do actually need a stateful command; and sometimes such stateful commands really don’t benefit much from being decomposed. But a little bit of mindfulness can make it so that this situation is an edge-case rather than the norm.
+*/
+
+// Re: stateful inline commands, here’s an example of a stateful turn-to-angle command as a subsystem factory method:
+
+// public Command turnToAngle(double targetDegrees) {
+//     // Create a controller for the inline command to capture
+//     PIDController controller = new PIDController(Constants.kTurnToAngleP, 0, 0);
+//     // We can do whatever configuration we want on the created state before returning from the factory
+//     controller.setPositionTolerance(Constants.kTurnToAngleTolerance);
+
+//     // Try to turn at a rate proportional to the heading error until we're at the setpoint, then stop
+//     return run(() -> arcadeDrive(0,-controller.calculate(gyro.getHeading(), targetDegrees)))
+//         .until(controller::atSetpoint)
+//         .andThen(runOnce(() -> arcadeDrive(0, 0)));
+// }
+
+/////////////////////////////////////////////
+// Ryan_Blue
+// Team 1018AM | WPILib Dev
+// 1d
+// and the one idea at a time,
+
+// The problem with this is that they’re not separate ideas.
+
+// Take the following code:
+
+// runOnce(()->elevator.setPosition(5), elevator).andThen(()->{}).until(elevator::atSetpoint);
+// It’s pretty clear, even without knowledge of the command based system, what this is supposed to do: set the elevator position, then idle until the elevator is at the setpoint.
+
+// The corresponding class code would be like this:
+
+// public class SetElevatorPosition extends CommandBase {
+//   private final Elevator m_elevator;
+//   private final double m_position;
+
+//   public SetElevatorPosition(Elevator elevator, double position) {
+//     m_elevator = elevator;
+//     m_position = position;
+//     addRequirements(m_elevator);
+//   }
+
+//   @Override
+//   public void initialize() {
+//     m_elevator.setPosition(m_position);
+//   }
+
+//   @Override
+//   public boolean isFinished() {
+//     return m_elevator.atSetpoint();
+//   }
+// }
+// There is just so much more boilerplate fluff which gets in the way of understanding what the command actually does. The in-line version makes it much more declarative and readable.
+
+// Oblarg
+// Robot apartments! invisible suburbs! skeleton treasuries!
+
+// Ryan_Blue
+// 1d
+// You can shorten the inline syntax further by the calling Elevator.run factory instead (it’s public!).
+
+// Bmongar
+// 5013 Codenator / Electrical, CSA
+
+// Ryan_Blue
+// 1d
+// When the pieces are as simple as that I agree, as the complexity grows i think there is a time to go first class object. I am not an absolutist except is my dislike of absolutism.
+
+// And I wouldn’t have put the m_elevator.setPosition(m_position);in initialize either.
+
+// mdurrani834
+
+// runOnce(()->elevator.setPosition(5), elevator).andThen(()->{}).until(elevator::atSetpoint);
+
+// While this is very clean, it’s not exactly that readable for a new student. What is the andThen(() → {}) doing? Why is there not a andThen() after the until() telling the motor to hold or stop? This is easiest when I can just read it like a sentence. “Set the elevator position to 5, then ???, until the elevator is at its setpoint”. The second code block makes it a lot clearer and defined for a new student. I’m sure you could write your inline command clearer, but I maintain that as it grows, its understandability (if that’s a word) gets worse at a faster rate than a traditional class.
+
+// From an educational standpoint, it’s so much easier for me to have students write these subclassed commands, understand the different parts completely, then teach them the whole inline command stuff because it makes more sense that way. Rather than struggle with understanding a command and this new syntax, they can take things one at a time. As commands get more and more complex, it becomes harder and harder to understand an inline command and it’s just plain easier to make it into a subclassed one for a student who isn’t an expert in in lining commands. For students that don’t have prior Java experience, it takes a lot of time to get them up and running with even the basics. My answer may be different if modern Java curricula included lambda expressions in their teachings, but the reality is that they aren’t.
+
+// I think at the end of the day, it comes down to priorities and what end of the pedagogy spectrum you lie on.
+
+// prensing
+// FRC 2877 LigerBots Mentor
+// 1d
+// There is just so much more boilerplate fluff which gets in the way of understanding what the command actually does.
+
+// Honestly I very much disagree. Yes there are about 20 lines but it is all very readable. The start and end conditions are explicitly there and obvious, and there is no extraneous “idle” clause. Unless you are very immersed in Java (which I and probably most students are not) “() → {}” is very non-obvious.
+
+// Ryan_Blue
+
+// mdurrani834
+// Looking at it again, this particular example would probably be better written as
+// runOnce(()->elevator.setPosition(5), elevator).andThen(waitUntil(elevator::atSetpoint));
+
+// Same behavior, just moves the waiting into a wait command rather than an until decorator.
+
+// Amicus1
+
+// Ryan_Blue
+
+// elevator.setPositionC(5).andThen(waitUntil(elevator::atSetpoint));
+
+// Even shorter, migrating the command creation to a factory in the subsystem.
+
+// ngreen
+// Doing that, you’d probably move the waiting and atsetpoint into the command factory, because I don’t really see a use case for setting the position without trying to complete it.
+
+// ngreen
+
+// Amicus1
+
+// Doing that, you’d probably move the waiting and atsetpoint into the command factory, because I don’t really see a use case for setting the position without trying to complete it.
+
+// Ryan_Blue
+
+// ngreen
+// Yep, this whole thing would be good as a factory. I included the elevator variable to give context.
+

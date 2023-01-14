@@ -19,6 +19,7 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
+import edu.wpi.first.wpilibj2.command.PrintCommand;
 import edu.wpi.first.wpilibj2.command.RunCommand;
 import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
 import edu.wpi.first.wpilibj2.command.button.JoystickButton;
@@ -149,6 +150,13 @@ private final XboxController driverController = new XboxController(driverControl
 
   private void configureAutoChooser()
   {
+    /*
+     * warning bizarre behavior of the Chooser.
+     * The selection is retained in NT through a Restart Robot Code
+     * But after the restart the first periodic cycle returns the Default Value
+     * and then the second periodic value (approximately, apparently) returns
+     * the retained previously selected value.
+     */
     //_________________________________________________________________________________
 
     autoChooser.addOption( "Auto 1", AutoChoice.kAuto1);        
@@ -233,14 +241,17 @@ private final XboxController driverController = new XboxController(driverControl
 
       case kAuto7:
                   autoCommand = new RunCommand // run repeatedly
-                    (
-                      driveSubsystem::DriveStraightSlowly, driveSubsystem
-                    )
-                    .withTimeout(autoMinimalMoveTime)
-                    .andThen(driveSubsystem::DriveStop, driveSubsystem) // only executed once; make RunCommand to multi-execute
-                    .andThen(driveSubsystem::DriveStop, driveSubsystem) // only executed once; make RunCommand to multi-execute
-                    .andThen(driveSubsystem::DriveStop, driveSubsystem);// only executed once; make RunCommand to multi-execute
+                    ( driveSubsystem::DriveStraightSlowly, driveSubsystem )
+                    .withTimeout( autoMinimalMoveTime)
+                    .andThen( driveSubsystem.testLambda ) // typed Runnable since no parm no return
+                    .andThen( driveSubsystem::TestMethod ) // method no parm no return is implied Runnable; no requirements so 1st arg is assumed a command
+                    .andThen( driveSubsystem::TestMethod, driveSubsystem ) // method no parm no return is implied Runnable; requirements so 1st arg assumed a Runnable
+                    .andThen( ( )->{ System.out.println("lambda"); } ) // lambda no parm no return is implied Runnable
+                    .andThen( driveSubsystem::DriveStop, driveSubsystem ) // only executed once; make RunCommand to multi-execute
+                    .andThen( driveSubsystem::DriveStop, driveSubsystem ) // only executed once; make RunCommand to multi-execute
+                    .andThen( driveSubsystem::DriveStop, driveSubsystem ) // only executed once; make RunCommand to multi-execute
                                                                         // or duplicate the individuals a few times to make sure it stops
+                    ;
                   break;
 
       case kAuto8:
@@ -260,7 +271,7 @@ private final XboxController driverController = new XboxController(driverControl
                   autoCommand = null;
                   break;
     }
-
+  
     return autoCommand;
   }
 /////////////////////////////////////////
@@ -340,10 +351,10 @@ private final XboxController driverController = new XboxController(driverControl
 //_________________________________________________________________________________
 
     new JoystickButton(driverController, XboxController.Button.kX.value)
-      .toggleWhenActive( // 1st press starts command; 2nd press interrupts command
+      .toggleOnTrue( // 1st press starts command; 2nd press interrupts command
         new SequentialCommandGroup
         (
-          new InstantCommand( ()-> System.out.println("toggle X button flywheel")),
+          new PrintCommand("toggle X button flywheel"),
           new SpinupFlywheelCommand(flywheelSubsystem, kDriverButtonFlywheelSpeed)
         ) );
 //_________________________________________________________________________________
@@ -368,6 +379,7 @@ private final XboxController driverController = new XboxController(driverControl
   }
 }
 
+// NOTE CommandGroupBase deprecated and replaced by statics in Commands
 // CommandGroupBase.clearGroupedCommands();
 
 // If command already exists and in case a different command is requested after the first time through,

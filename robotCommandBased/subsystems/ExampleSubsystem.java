@@ -1,6 +1,7 @@
 package frc.robot.subsystems;
 
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.commands.ExampleCommandBuilder;
 
 public class ExampleSubsystem extends Subsystem4237 {
@@ -50,10 +51,11 @@ private void configureCommands()
     var command = ecb.getCommand(i);
         // schedule the autonomous command (example)
   if (command != null) {
-    System.out.print("scheduled example command ID ");
+    System.out.print("scheduled example command ID " + i);
     if(i == 2)
     {
-      command.schedule(false); // specify interruptible (true) or not interruptible (false)
+      // scduling this early - disabled so don't cancel commands in disabled
+      command.withInterruptBehavior(Command.InterruptionBehavior.kCancelIncoming).schedule();
       System.out.println(" not interruptible - scheduled is " + command.isScheduled());
     }
     else

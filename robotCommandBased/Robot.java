@@ -20,7 +20,7 @@ class Robot extends TimedRobot {
   }
 
   private Command autonomousCommand;
-  private AutoChoice autoChoicePrevious;
+  private AutoChoice autoChoicePrevious = null;
   private RobotContainer robotContainer;
   
   Robot()
@@ -63,10 +63,10 @@ class Robot extends TimedRobot {
   @Override
   public void disabledInit()
   {
-    autoChoicePrevious = null; // force refreshing the auto command every time robot disabled from another mode
+    ///////no don't do this autoChoicePrevious = null; // force refreshing the auto command every time robot disabled from another mode
     // Cancels all running commands.
-    DriverStation.reportWarning("Canceling all scheduled commands in Disabled", false);
-    CommandScheduler.getInstance().cancelAll(); // be careful - there might be something you want to keep running
+    // DriverStation.reportWarning("Canceling all scheduled commands in Disabled", false);
+    // CommandScheduler.getInstance().cancelAll(); // be careful - there might be something you want to keep running
   }
 
   @Override

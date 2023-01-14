@@ -33,20 +33,21 @@ public class FanFSMSubsystem  extends Subsystem4237 {
   
   @Override
   public void readPeriodicInputs()
-    {
+  {
       // populate each input variable needed for states (commands) and events (triggers)
       periodicIO.AButtonPressed = driverController.getAButtonPressed(); // for trigger for next state
       periodicIO.BButtonPressed = driverController.getBButtonPressed(); // for trigger for stop
-    }
+  }
 
     public void writePeriodicOutputs()
-    {
+  {
       // act on (put out) data others have populated
       // System.out.println(periodicIO.speed);
       SmartDashboard.putNumber("fan speed", periodicIO.speed);
-    } 
+  } 
     
-  public class PeriodicIO {
+  public class PeriodicIO
+  {
   // INPUTS
     public boolean AButtonPressed; // for trigger for next state
     public boolean BButtonPressed; // for trigger for stop
@@ -96,16 +97,16 @@ public class FanFSMSubsystem  extends Subsystem4237 {
       // Thus transition added order is important if there is more than one transition out of a state.
       //
       // Add Current State (Command), Event (Trigger), Next State (Next Command)
-        transitions.add(new Transition(  offState,   nst,  highState  ));
-        transitions.add(new Transition(  highState,  nst,  medState  ));
-        transitions.add(new Transition(  medState,   nst,  lowState  ));
-        transitions.add(new Transition(  lowState,   nst,  offState  ));
+        transitions.add( new Transition(  offState,   nst,  highState  ) );
+        transitions.add( new Transition(  highState,  nst,  medState   ) );
+        transitions.add( new Transition(  medState,   nst,  lowState   ) );
+        transitions.add( new Transition(  lowState,   nst,  offState   ) );
 
-        transitions.add(new Transition(  highState,  ost,  offState  ));
-        transitions.add(new Transition(  medState,   ost,  offState  ));
-        transitions.add(new Transition(  lowState,   ost,  offState  ));
+        transitions.add( new Transition(  highState,  ost,  offState   ) );
+        transitions.add( new Transition(  medState,   ost,  offState   ) );
+        transitions.add( new Transition(  lowState,   ost,  offState   ) );
 
-        System.out.println(dumpFSM());
+        System.out.println( dumpFSM() );
 
       // schedule the Command for the initial state
       // but may not matter depending on commands and triggers that may run only ENABLED
@@ -133,14 +134,17 @@ public class FanFSMSubsystem  extends Subsystem4237 {
     {
       // the command by default is interruptible and does NOT run when DISABLED
       // but the subsystem is still running and processing inputs so slightly odd behavior may happen
-      public OffState() { addRequirements(FanFSMSubsystem.this); }
+      public OffState() { addRequirements( FanFSMSubsystem.this ); }
 
       @Override
       public void initialize() { periodicIO.speed = kOffSpeed; } // set the speed for the state if not in execute
       @Override
       public void execute() { periodicIO.speed = kOffSpeed; } // refresh state as needed
       @Override
-      public void end(boolean interrupted) { periodicIO.speed = kOffSpeed; } // leaving state so turn off
+      public void end( boolean interrupted ) {
+         periodicIO.speed = kOffSpeed; // leaving state so turn off
+         if ( DriverStation.isDisabled() ) currentState = initialState; // safety - no surprise  restarts
+      }
     }    // end OffState
 
 //___________________________________________________________________________________________________________
@@ -149,14 +153,17 @@ public class FanFSMSubsystem  extends Subsystem4237 {
     {
       // the command by default is interruptible and does NOT run when DISABLED
       // but the subsystem is still running and processing inputs so slightly odd behavior may happen
-      public HighState() { addRequirements(FanFSMSubsystem.this); }
+      public HighState() { addRequirements( FanFSMSubsystem.this ); }
 
       @Override
       public void initialize() { periodicIO.speed = kHighSpeed; } // set the speed for the state if not in execute
       @Override
       public void execute() { periodicIO.speed = kHighSpeed; } // refresh state as needed
       @Override
-      public void end(boolean interrupted) { periodicIO.speed = kOffSpeed; } // leaving state so turn off
+      public void end( boolean interrupted ) {
+         periodicIO.speed = kOffSpeed; // leaving state so turn off
+         if ( DriverStation.isDisabled() ) currentState = initialState; // safety - no surprise  restarts
+      }
     }    // end HighState
 
 //___________________________________________________________________________________________________________
@@ -166,14 +173,16 @@ public class FanFSMSubsystem  extends Subsystem4237 {
     {
       // the command by default is interruptible and does NOT run when DISABLED
       // but the subsystem is still running and processing inputs so slightly odd behavior may happen
-      public MedState() { addRequirements(FanFSMSubsystem.this); }
+      public MedState() { addRequirements( FanFSMSubsystem.this ); }
 
       @Override
       public void initialize() { periodicIO.speed = kMediumSpeed; } // set the speed for the state if not in execute
       @Override
       public void execute() { periodicIO.speed = kMediumSpeed; } // refresh state as needed
       @Override
-      public void end(boolean interrupted) { periodicIO.speed = kOffSpeed; } // leaving state so turn off
+      public void end( boolean interrupted ) { periodicIO.speed = kOffSpeed; // leaving state so turn off
+        if ( DriverStation.isDisabled() ) currentState = initialState; // safety - no surprise  restarts
+      }
     }    // end MedState
 
 //___________________________________________________________________________________________________________
@@ -183,14 +192,17 @@ public class FanFSMSubsystem  extends Subsystem4237 {
     {
       // the command by default is interruptible and does NOT run when DISABLED
       // but the subsystem is still running and processing inputs so slightly odd behavior may happen
-      public LowState() { addRequirements(FanFSMSubsystem.this); }
+      public LowState() { addRequirements( FanFSMSubsystem.this ); }
 
       @Override
       public void initialize() { periodicIO.speed = kLowSpeed; } // set the speed for the state if not in execute
       @Override
       public void execute() { periodicIO.speed = kLowSpeed; } // refresh state as needed
       @Override
-      public void end(boolean interrupted) { periodicIO.speed = kOffSpeed; } // leaving state so turn off
+      public void end( boolean interrupted ) {
+         periodicIO.speed = kOffSpeed; // leaving state so turn off
+         if ( DriverStation.isDisabled() ) currentState = initialState; // safety - no surprise  restarts
+      }
     }   // end LowState
 
 //___________________________________________________________________________________________________________
@@ -201,25 +213,26 @@ public class FanFSMSubsystem  extends Subsystem4237 {
 //TRIGGERS
 //TRIGGERS
 //TRIGGERS
-/**
+ /**
  * Press A button to change to next state (like pulling the fan chain)
  */
 public class NextStateTrigger extends Trigger
 {
-  NextStateTrigger()
-  {
-    triggers.add(this); // add to the list of triggers
-  }
+    NextStateTrigger()
+    {
+      super
+      (
+        () ->
+          { 
+            if ( DriverStation.isTeleopEnabled() )
+              return FanFSMSubsystem.this.periodicIO.AButtonPressed;
+            else
+              return false; // ignore events (triggers) unless
+          } 
+      );
 
-  // This returns whether the trigger is active
-  @Override
-  public boolean get()
-  {
-    if(DriverStation.isTeleopEnabled())
-      return FanFSMSubsystem.this.periodicIO.AButtonPressed;
-    else
-      return false; // ignore events (triggers) unless
-  }
+      triggers.add( this ); // add to the list of triggers
+    }
 }
 
 /**
@@ -227,20 +240,21 @@ public class NextStateTrigger extends Trigger
  */
 public class OffStateTrigger extends Trigger
 {
-  OffStateTrigger()
-  {
-    triggers.add(this); // add to the list of triggers
-  }
+    OffStateTrigger()
+    {
+      super
+      (
+        () ->
+          { 
+            if ( DriverStation.isTeleopEnabled() )
+              return FanFSMSubsystem.this.periodicIO.BButtonPressed;
+            else
+              return false; // ignore events (triggers) unless
+          } 
+      );
 
-  // This returns whether the trigger is active
-  @Override
-  public boolean get()
-  {
-    if(DriverStation.isTeleopEnabled())
-      return FanFSMSubsystem.this.periodicIO.BButtonPressed;
-    else
-      return false; // ignore events (triggers) unless 
-  }
+      triggers.add( this ); // add to the list of triggers
+    }
 }
 //end TRIGGERS
 //end TRIGGERS
@@ -250,7 +264,7 @@ public class OffStateTrigger extends Trigger
 //////// HELPER FUNCTIONS - LARGELY FSM INDEPENDENT except the class constructor name
 /////////////////////////////////////////////////////////////////////////////////////////
 
-public FanFSMSubsystem(XboxController driverController) // pass in all the stuff this class needs from caller
+public FanFSMSubsystem( XboxController driverController ) // pass in all the stuff this class needs from caller
   {  
       this.driverController = driverController;
       periodicIO = new PeriodicIO(); // all the inputs appear here
@@ -259,7 +273,7 @@ public FanFSMSubsystem(XboxController driverController) // pass in all the stuff
 
 static
 {
-    System.out.println("Loading: " + MethodHandles.lookup().lookupClass().getCanonicalName());
+    System.out.println( "Loading: " + MethodHandles.lookup().lookupClass().getCanonicalName() );
 }
  
 @Override
@@ -307,11 +321,11 @@ public void simulationPeriodic() {
   {
     Command newState = null;
 
-    newState = findNextState( currentState ); // see if a transition was triggered to the next state
+    newState = findNextState ( currentState ); // see if a transition was triggered to the next state
 
-    if(newState != null) // found in transition table
+    if ( newState != null ) // found in transition table
     {
-      // System.out.println(newFanState.getClass().getSimpleName());
+      // System.out.println(newState.getClass().getSimpleName());
       currentState = newState; // transition to next state even if it's the same since it was in the transition table
       currentState.schedule(); // new state interrupts previous state, end old and init new methods are run if available
       // System.out.println("new state scheduled " + currentState.isScheduled());
@@ -326,13 +340,13 @@ public void simulationPeriodic() {
    * @param event
    * @return new state or null if no transition was triggered
    */
-  private static Command findNextState (Command currentState)
+  private static Command findNextState ( Command currentState )
   {
-    for (Transition transition : transitions) // loop through transition table
+    for ( Transition transition : transitions ) // loop through transition table
     {
-      if (transition.currentState == currentState) // found an entry for the current state
+      if ( transition.currentState == currentState ) // found an entry for the current state
       {
-          if(transition.event.get()) // check if this entry was triggered this iteration
+          if ( transition.event.getAsBoolean() ) // check if this entry was triggered this iteration
           {
             // System.out.println(" transition change to " + transition.nextState.toString());
             return transition.nextState; // return the new state
@@ -350,15 +364,15 @@ public void simulationPeriodic() {
   {
     StringBuilder sb = new StringBuilder(500);
     sb.append("\nFSM Transition Table for " + this.getClass().getSimpleName() + "\nFrom State   +   Event   ->   Next State\n");
-    for (Transition transition : transitions)
+    for ( Transition transition : transitions )
     {
       sb.append( String.format("%-12s + %-12s -> %-12s\n",
         transition.currentState.getClass().getSimpleName(),
         transition.event.getClass().getSimpleName(),
-        transition.nextState.getClass().getSimpleName()));
+        transition.nextState.getClass().getSimpleName() ) );
     }
-    sb.append("initial state: " + initialState.getClass().getSimpleName());
-    sb.append(", current state: " + currentState.getClass().getSimpleName() + "\n");
+    sb.append( "initial state: " + initialState.getClass().getSimpleName() );
+    sb.append( ", current state: " + currentState.getClass().getSimpleName() + "\n" );
     
     return sb.toString();
   }

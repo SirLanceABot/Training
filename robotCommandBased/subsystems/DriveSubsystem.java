@@ -28,7 +28,7 @@ public class DriveSubsystem extends Subsystem4237 {
   /**
    * define all the inputs to be read at once
    */
-  private PeriodicIO mPeriodicIO;
+  public PeriodicIO mPeriodicIO;
   public class PeriodicIO {
       // INPUTS
       public double PctOutput;
@@ -43,7 +43,7 @@ public class DriveSubsystem extends Subsystem4237 {
    */
     
   XboxController driverController;
-  Navx gyro; //////////// NAVX GYRO INPUT ////////////
+  // Navx gyro; //////////// NAVX GYRO INPUT ////////////
   Supplier<Double> getVelocity;
   Runnable printSpeed;
   Consumer<Double> setTestMotorPctVBus;
@@ -55,9 +55,9 @@ public class DriveSubsystem extends Subsystem4237 {
     {
       mPeriodicIO = new PeriodicIO();
       this.driverController = driverController; 
-      createTestMotorController(configRetries); //FIXME DEFINE A CONFIG MODE TO RUN IN PERIODIC
+      createTestMotorController(configRetries); //TODO DEFINE A CONFIG MODE TO RUN IN PERIODIC
 
-      gyro = new Navx(gyro);      
+      // gyro = new Navx(gyro);      
       
     }
 
@@ -75,7 +75,8 @@ public class DriveSubsystem extends Subsystem4237 {
   public void writePeriodicOutputs()
   {
     SmartDashboard.putNumber(this.getName() + " velocity RPM", mPeriodicIO.encoder);
-    gyro.displayGyro(); // get the GYRO values
+    printSpeed.run();
+    // gyro.displayGyro(); // get the GYRO values
   }
   
   @Override
@@ -141,6 +142,8 @@ public class DriveSubsystem extends Subsystem4237 {
     testMotor.setIdleMode(IdleMode.kCoast);
     errors += check(testMotor, "set idle mode", true);
 
+    // https://docs.revrobotics.com/sparkmax/operating-modes/control-interfaces
+    // default values shown here not what's in the docs
     // none of these faster settings seems to work - data still slow to update; don't know why
     testMotor.setControlFramePeriodMs(10);
     errors += check(testMotor, "set control frame period", true);
@@ -199,11 +202,9 @@ public class DriveSubsystem extends Subsystem4237 {
     // method to display stuff
     printSpeed = () ->
     {
-      SmartDashboard.putNumber("%VBus", getPctOutput.get());
-      SmartDashboard.putNumber("bus voltage", getBusVoltage.get());
-      SmartDashboard.updateValues();
+      SmartDashboard.putNumber("%VBus", mPeriodicIO.PctOutput);
+      SmartDashboard.putNumber("bus voltage", mPeriodicIO.busVoltage);
     };
-
     return errors == 0;
   }
 
@@ -240,7 +241,14 @@ public class DriveSubsystem extends Subsystem4237 {
     System.out.println("set motor off");
     setTestMotorPctVBus.accept(0.);
   }
-  
+
+  public void TestMethod()
+  {
+    System.out.println("TestMethod");
+  }
+
+  public Runnable testLambda = () -> {System.out.println("testLambda");};
+
   public Command joystickDriveCommand()
       { 
         return
@@ -249,6 +257,7 @@ public class DriveSubsystem extends Subsystem4237 {
             () -> {
               if(!DriverStation.isAutonomous()) // ignore joystick during auto
                 setTestMotorPctVBus.accept(mPeriodicIO.driverControllerLeftX);
+                SmartDashboard.putNumber("DriverControllerLeftX", mPeriodicIO.driverControllerLeftX);
             },
             // requirement required for a default command - maybe not needed in 2023
             DriveSubsystem.this

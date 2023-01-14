@@ -34,7 +34,7 @@ public class ExampleCommand extends CommandBase {
   @Override
   public void initialize()
    {
-     System.out.println("commandID " + commandID + " initializing");
+     System.out.println(" commandID " + commandID + " initializing");
      printCount = 0;
   }
 
@@ -43,21 +43,21 @@ public class ExampleCommand extends CommandBase {
   public void execute()
   {
     printCount++;
-    System.out.println("commandID " + commandID + " printed " + printCount);
+    System.out.println(" commandID " + commandID + " printed " + printCount);
   }
 
   // Called once the command ends or is interrupted.
   @Override
   public void end(boolean interrupted) // interrupted true for interrupted or false if the isFinished had been set to true
   {
-    System.out.println("commandID " + commandID + " ended by interrupted " + interrupted);
+    System.out.println(" commandID " + commandID + " ended by interrupted " + interrupted);
   }
   
   // Returns true when the command should end.
   @Override
   public boolean isFinished() {
     if(printCount >= 100)
-    { System.out.println("commandID " + commandID + " printed limit reached so isFinished");
+    { System.out.println(" commandID " + commandID + " printed limit reached so isFinished");
       return true;
     }
     else return false;
