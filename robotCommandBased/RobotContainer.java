@@ -4,14 +4,19 @@ import static frc.robot.Constants.driverControllerID;
 import static frc.robot.Constants.Drive.autoMinimalMoveTime;
 import static frc.robot.Constants.Flywheel.*;
 
+import java.io.IOException;
 import java.lang.invoke.MethodHandles;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 import edu.wpi.first.util.datalog.DataLog;
 import edu.wpi.first.util.datalog.StringLogEntry;
+import edu.wpi.first.wpilibj.BuiltInAccelerometer;
 import edu.wpi.first.wpilibj.DataLogManager;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.PowerDistribution;
 import edu.wpi.first.wpilibj.XboxController;
+import edu.wpi.first.wpilibj.interfaces.Accelerometer;
 import edu.wpi.first.wpilibj.shuffleboard.EventImportance;
 import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
@@ -46,6 +51,27 @@ class RobotContainer {
   static
   {
       System.out.println("Loading: " + MethodHandles.lookup().lookupClass().getCanonicalName());
+
+      //// start get roboRIO comment
+/*
+roboRIO dashboard reads:
+Programmers' Tub 1
+
+prints from here:
+The roboRIO comment is >PRETTY_HOSTNAME="Programmers' Tub 1"
+<
+*/
+      final Path commentPath = Path.of("/etc/machine-info");
+      try {  
+      // var temp = System.currentTimeMillis() + "," + (Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() + "\n");
+      // Files.writeString(memoryLog, temp, StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+      var comment = Files.readString(commentPath);
+      System.out.println("The roboRIO comment is >" + comment + "<");
+      } catch (IOException e) {
+      // Couldn't read the file -- handle it how you want
+      System.out.println(e);
+      }
+      //// end get roboRIO comment
   }
 
 //_________________________________________________________________________________
@@ -74,6 +100,7 @@ class RobotContainer {
 //_________________________________________________________________________________
 
 private final XboxController driverController = new XboxController(driverControllerID);
+private final Accelerometer accelerometer = new BuiltInAccelerometer(Accelerometer.Range.k2G);
   // private final ArrayList<SubsystemTeam> m_subsystemArrayList = new ArrayList<SubsystemTeam>();
 
   /////////////////////////////////////////
@@ -106,7 +133,7 @@ private final XboxController driverController = new XboxController(driverControl
     if(!useFullRobot) DriverStation.reportWarning("NOT USING FULL ROBOT", false);
     
     exampleSubsystem  = (useFullRobot || useExample  ? new ExampleSubsystem()                  : null);
-    driveSubsystem    = (useFullRobot || useDrive    ? new DriveSubsystem(driverController)    : null);
+    driveSubsystem    = (useFullRobot || useDrive    ? new DriveSubsystem(driverController, accelerometer)  : null);
     flywheelSubsystem = (useFullRobot || useFlywheel ? new FlywheelSubsystem(driverController) : null);
     fanFSMSubsystem   = (useFullRobot || useFanFSM   ? new FanFSMSubsystem(driverController)   : null);
     

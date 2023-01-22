@@ -5,12 +5,23 @@ import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.commands.ExampleCommandBuilder;
 
 public class ExampleSubsystem extends Subsystem4237 {
-  
+  private PeriodicIO periodicIO;
+
+  private class PeriodicIO
+  {
+  // INPUTS
+  // OUTPUTS
+  }
+  /**
+   * end define I/O
+   */
+
   private int printCount;
 
   /** Creates a new ExampleSubsystem. */
   public ExampleSubsystem()
     {
+      periodicIO = new PeriodicIO(); // all the inputs and outputs appear here
       configureCommands();
       printCount = 0;
     }

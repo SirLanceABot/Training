@@ -306,7 +306,7 @@ public class Autonomous1Command extends SequentialCommandGroup
 
 prensing
 
-Yes, I get it, at least partly. But what I missed in my description is that, after the first few obvious commands like “drive” and “run intake”, all the interesting commands involve 2-3 subsystems and, even more challenging, have data values which need to go from one subcommand to another during the command.
+Yes, I get it, at least partly. But what I missed in my description is that, after the first few obvious commands like 'drive' and 'run intake', all the interesting commands involve 2-3 subsystems and, even more challenging, have data values which need to go from one subcommand to another during the command.
 
 So, for a simple example, a shooting command will first run the vision system to get a target lock, then feed the (conditioned?) angle to the drivetrain to turn to the target, and the distance to the shooter to set the speed. I really don’t see a clean way to move that data around from one command to another while running, apart from stashing it in a subsystem (which feels ugly), or having the subsequent commands re-fetch/compute values (which might be in different state!). Is there a clean example which does this kind of stateful progression?
 Oblarg
@@ -319,7 +319,7 @@ As you say, the Command-based composition model doesn’t explicitly support dat
 
 Unfortunately, trying to implement such a thing rapidly runs into limitations of the Java type system (in particular it has a very hard time representing the type of our supposed State variable). There’s unlikely to ever be a strict solution in this sense, unless we move to a language with a much more powerful type system (C++ may be able to do its own thing here, but the template hackery would probably be awful).
 
-A more feasible solution is to declare command state as method locals inside of a factory method that returns a command constructed via inline syntax, with the inline functions capturing the state variables. In C++ this works just fine, but in Java it runs problems with the “effectively final” limitation on lambda captures. This can be circumvented by placing state primitives in wrapper classes (arrays are a common hack, though any mutable data structure will do), or by writing accessor methods for them and capturing calls to those instead. At this point we’re not really saving on verbosity for a single command definition anymore, but we may still be reducing code duplication by staying within a composition model - and if a factory class provides factory methods for multiple related command types, some of the boilerplate can be shared.
+A more feasible solution is to declare command state as method locals inside of a factory method that returns a command constructed via inline syntax, with the inline functions capturing the state variables. In C++ this works just fine, but in Java it runs problems with the 'effectively final' limitation on lambda captures. This can be circumvented by placing state primitives in wrapper classes (arrays are a common hack, though any mutable data structure will do), or by writing accessor methods for them and capturing calls to those instead. At this point we’re not really saving on verbosity for a single command definition anymore, but we may still be reducing code duplication by staying within a composition model - and if a factory class provides factory methods for multiple related command types, some of the boilerplate can be shared.
 
 Unfortunately, Java is rigid and verbose. You have to pick between the rigid verbosity of its subclassing rules, or the rigid verbosity of its functional APIs.
 
@@ -327,7 +327,7 @@ As a final note, I want to object slightly to this characterization:
 
 all the interesting commands involve 2-3 subsystems and, even more challenging, have data values which need to go from one subcommand to another during the command.
 
-It’s true that stateful commands are challenging. I think this is a good reason to try as hard as possible to avoid stateful commands except where absolutely necessary. A lot of “interesting” commands don’t really need transient state to work well, and the apparent need for it can often be satisfied by improving the state management of the rest of the robot (e.g. so that it is robust/consistent when repeatedly queried during a single scheduler iteration).
+It’s true that stateful commands are challenging. I think this is a good reason to try as hard as possible to avoid stateful commands except where absolutely necessary. A lot of 'interesting' commands don’t really need transient state to work well, and the apparent need for it can often be satisfied by improving the state management of the rest of the robot (e.g. so that it is robust/consistent when repeatedly queried during a single scheduler iteration).
 
 Sometimes you do actually need a stateful command; and sometimes such stateful commands really don’t benefit much from being decomposed. But a little bit of mindfulness can make it so that this situation is an edge-case rather than the norm.
 */
@@ -403,7 +403,7 @@ Sometimes you do actually need a stateful command; and sometimes such stateful c
 
 // runOnce(()->elevator.setPosition(5), elevator).andThen(()->{}).until(elevator::atSetpoint);
 
-// While this is very clean, it’s not exactly that readable for a new student. What is the andThen(() → {}) doing? Why is there not a andThen() after the until() telling the motor to hold or stop? This is easiest when I can just read it like a sentence. “Set the elevator position to 5, then ???, until the elevator is at its setpoint”. The second code block makes it a lot clearer and defined for a new student. I’m sure you could write your inline command clearer, but I maintain that as it grows, its understandability (if that’s a word) gets worse at a faster rate than a traditional class.
+// While this is very clean, it’s not exactly that readable for a new student. What is the andThen(() → {}) doing? Why is there not a andThen() after the until() telling the motor to hold or stop? This is easiest when I can just read it like a sentence. 'Set the elevator position to 5, then ???, until the elevator is at its setpoint'. The second code block makes it a lot clearer and defined for a new student. I’m sure you could write your inline command clearer, but I maintain that as it grows, its understandability (if that’s a word) gets worse at a faster rate than a traditional class.
 
 // From an educational standpoint, it’s so much easier for me to have students write these subclassed commands, understand the different parts completely, then teach them the whole inline command stuff because it makes more sense that way. Rather than struggle with understanding a command and this new syntax, they can take things one at a time. As commands get more and more complex, it becomes harder and harder to understand an inline command and it’s just plain easier to make it into a subclassed one for a student who isn’t an expert in in lining commands. For students that don’t have prior Java experience, it takes a lot of time to get them up and running with even the basics. My answer may be different if modern Java curricula included lambda expressions in their teachings, but the reality is that they aren’t.
 
@@ -414,7 +414,7 @@ Sometimes you do actually need a stateful command; and sometimes such stateful c
 // 1d
 // There is just so much more boilerplate fluff which gets in the way of understanding what the command actually does.
 
-// Honestly I very much disagree. Yes there are about 20 lines but it is all very readable. The start and end conditions are explicitly there and obvious, and there is no extraneous “idle” clause. Unless you are very immersed in Java (which I and probably most students are not) “() → {}” is very non-obvious.
+// Honestly I very much disagree. Yes there are about 20 lines but it is all very readable. The start and end conditions are explicitly there and obvious, and there is no extraneous 'idle' clause. Unless you are very immersed in Java (which I and probably most students are not) '() → {}' is very non-obvious.
 
 // Ryan_Blue
 

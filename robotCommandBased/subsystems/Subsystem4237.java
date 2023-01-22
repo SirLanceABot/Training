@@ -34,5 +34,6 @@ public abstract class Subsystem4237 extends SubsystemBase
     {
       subsystemArrayList.forEach( (subsystem) -> subsystem.writePeriodicOutputs() );
     }
+
 }
 

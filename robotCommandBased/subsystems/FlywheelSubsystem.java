@@ -31,7 +31,7 @@ public class FlywheelSubsystem extends Subsystem4237 {
   public FlywheelSubsystem(XboxController driverController)
   {
     createFlywheelMotorController(parameterSetAttemptCount);
-    periodicIO = new PeriodicIO(); // all the inputs appear here
+    periodicIO = new PeriodicIO(); // all the inputs and outputs appear here
     this.driverController = driverController; // example, pass in all the stuff this class needs from above
     printCount = 0;
   }
@@ -69,12 +69,13 @@ public class FlywheelSubsystem extends Subsystem4237 {
   * define all the inputs to be read at once
   */
   private PeriodicIO periodicIO;
-  public XboxController driverController;
+  private XboxController driverController;
 
-  public class PeriodicIO {
+  private class PeriodicIO {
     // INPUTS
-    public double velocity;
-    public double PctOutput;
+    private double velocity;
+    private double PctOutput;
+    // OUTPUTS
   }
   /**
   * end define inputs
@@ -135,7 +136,7 @@ public class FlywheelSubsystem extends Subsystem4237 {
   public Supplier<Double> getBusVoltage;
   public Supplier<Boolean> isVoltageCompensationEnabled;
 
-  double speed = 0.; //initial speed to run and display on SmartDashboard
+  double speed = 0.; // initial speed to run and display on SmartDashboard
   // It seemed that sometimes a previous value from the SmartDashboard is used (race condition?).
   // This code tries hard to prevent but not sure it's perfect or what the issue was.
   int parameterSetAttemptCount = 5; // retry flywheel config if error

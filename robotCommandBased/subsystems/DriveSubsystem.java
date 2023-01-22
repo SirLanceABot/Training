@@ -13,6 +13,7 @@ import com.revrobotics.RelativeEncoder;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.XboxController;
+import edu.wpi.first.wpilibj.interfaces.Accelerometer;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.RunCommand;
@@ -37,13 +38,16 @@ public class DriveSubsystem extends Subsystem4237 {
       public double velocity;
       public double driverControllerLeftX;
       public double encoder;
+      public double accelX;
+      public double accelY;
+      public double accelZ;
   }
   /**
    * end define inputs
    */
     
   XboxController driverController;
-  // Navx gyro; //////////// NAVX GYRO INPUT ////////////
+  Accelerometer accelerometer;
   Supplier<Double> getVelocity;
   Runnable printSpeed;
   Consumer<Double> setTestMotorPctVBus;
@@ -51,10 +55,11 @@ public class DriveSubsystem extends Subsystem4237 {
   Supplier<Double> getBusVoltage;
   Supplier<Double> getVoltageCompensation;
 
-  public DriveSubsystem(XboxController driverController)
+  public DriveSubsystem(XboxController driverController, Accelerometer accelerometer)
     {
       mPeriodicIO = new PeriodicIO();
-      this.driverController = driverController; 
+      this.driverController = driverController;
+      this.accelerometer = accelerometer; 
       createTestMotorController(configRetries); //TODO DEFINE A CONFIG MODE TO RUN IN PERIODIC
 
       // gyro = new Navx(gyro);      
@@ -70,6 +75,9 @@ public class DriveSubsystem extends Subsystem4237 {
       mPeriodicIO.voltageCompensation = getVoltageCompensation.get();
       mPeriodicIO.encoder = getVelocity.get();
       mPeriodicIO.driverControllerLeftX = driverController.getLeftX();
+      mPeriodicIO.accelX = accelerometer.getX();
+      mPeriodicIO.accelY = accelerometer.getY();
+      mPeriodicIO.accelZ = accelerometer.getZ();
     }
 
   public void writePeriodicOutputs()
@@ -77,6 +85,7 @@ public class DriveSubsystem extends Subsystem4237 {
     SmartDashboard.putNumber(this.getName() + " velocity RPM", mPeriodicIO.encoder);
     printSpeed.run();
     // gyro.displayGyro(); // get the GYRO values
+    SmartDashboard.putNumber("Tilt X-Z", tiltXZ() );
   }
   
   @Override
@@ -263,4 +272,16 @@ public class DriveSubsystem extends Subsystem4237 {
             DriveSubsystem.this
             );
       }
+
+  /**
+   * roboRIO tilt in degrees
+   * @return angle degrees
+   */
+  public double tiltXZ()
+  {
+    // var angleXY = Math.atan2(mPeriodicIO.accelX, mPeriodicIO.accelY);
+    var angleXZ = Math.atan2(mPeriodicIO.accelX, mPeriodicIO.accelZ);
+    // var angleYZ = Math.atan2(mPeriodicIO.accelY, mPeriodicIO.accelZ);
+    return angleXZ*360./(2.*Math.PI);
+  }
 }

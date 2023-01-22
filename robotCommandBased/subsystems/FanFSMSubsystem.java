@@ -28,7 +28,7 @@ public class FanFSMSubsystem  extends Subsystem4237 {
    * define all the I/O to be read and written at once periodically
    * by robotPeriodic()
    */
-  public PeriodicIO periodicIO;
+  private PeriodicIO periodicIO;
   private XboxController driverController;
   
   @Override
@@ -39,20 +39,20 @@ public class FanFSMSubsystem  extends Subsystem4237 {
       periodicIO.BButtonPressed = driverController.getBButtonPressed(); // for trigger for stop
   }
 
-    public void writePeriodicOutputs()
+  public void writePeriodicOutputs()
   {
       // act on (put out) data others have populated
       // System.out.println(periodicIO.speed);
       SmartDashboard.putNumber("fan speed", periodicIO.speed);
   } 
     
-  public class PeriodicIO
+  private class PeriodicIO
   {
   // INPUTS
-    public boolean AButtonPressed; // for trigger for next state
-    public boolean BButtonPressed; // for trigger for stop
+    private boolean AButtonPressed; // for trigger for next state
+    private boolean BButtonPressed; // for trigger for stop
   // OUTPUTS
-    public double speed; // fan speed
+    private double speed; // fan speed
   }
   /**
    * end define I/O
@@ -267,7 +267,7 @@ public class OffStateTrigger extends Trigger
 public FanFSMSubsystem( XboxController driverController ) // pass in all the stuff this class needs from caller
   {  
       this.driverController = driverController;
-      periodicIO = new PeriodicIO(); // all the inputs appear here
+      periodicIO = new PeriodicIO(); // all the inputs and outputs appear here
       initializeFSM();
   }
 

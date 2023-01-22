@@ -46,9 +46,11 @@ public class TemplateSubsystem  extends Subsystem4237{
   private PeriodicIO periodicIO;
   private XboxController driverController; // example
 
-  public class PeriodicIO {
+  public class PeriodicIO
+  {
       // INPUTS
       public long dummy; // example
+      // OUTPUTS
   }
   /**
    * end define inputs
