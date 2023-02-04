@@ -20,7 +20,8 @@ import edu.wpi.first.wpilibj2.command.RunCommand;
 
 import static frc.robot.Constants.Drive.*;
 
-public class DriveSubsystem extends Subsystem4237 {
+public class DriveSubsystem extends Subsystem4237
+{
   static
   {
       System.out.println("Loading: " + MethodHandles.lookup().lookupClass().getCanonicalName());
@@ -29,7 +30,7 @@ public class DriveSubsystem extends Subsystem4237 {
   /**
    * define all the inputs to be read at once
    */
-  public PeriodicIO mPeriodicIO;
+  public PeriodicIO periodicIO  = new PeriodicIO();
   public class PeriodicIO {
       // INPUTS
       public double PctOutput;
@@ -57,7 +58,7 @@ public class DriveSubsystem extends Subsystem4237 {
 
   public DriveSubsystem(XboxController driverController, Accelerometer accelerometer)
     {
-      mPeriodicIO = new PeriodicIO();
+      registerPeriodicIO();
       this.driverController = driverController;
       this.accelerometer = accelerometer; 
       createTestMotorController(configRetries); //TODO DEFINE A CONFIG MODE TO RUN IN PERIODIC
@@ -70,19 +71,19 @@ public class DriveSubsystem extends Subsystem4237 {
   public void readPeriodicInputs()
     {
       SmartDashboard.putString(this.getName() + " read", "readPeriodicInputs");
-      mPeriodicIO.PctOutput = getPctOutput.get();
-      mPeriodicIO.busVoltage = getBusVoltage.get();
-      mPeriodicIO.voltageCompensation = getVoltageCompensation.get();
-      mPeriodicIO.encoder = getVelocity.get();
-      mPeriodicIO.driverControllerLeftX = driverController.getLeftX();
-      mPeriodicIO.accelX = accelerometer.getX();
-      mPeriodicIO.accelY = accelerometer.getY();
-      mPeriodicIO.accelZ = accelerometer.getZ();
+      periodicIO.PctOutput = getPctOutput.get();
+      periodicIO.busVoltage = getBusVoltage.get();
+      periodicIO.voltageCompensation = getVoltageCompensation.get();
+      periodicIO.encoder = getVelocity.get();
+      periodicIO.driverControllerLeftX = driverController.getLeftX();
+      periodicIO.accelX = accelerometer.getX();
+      periodicIO.accelY = accelerometer.getY();
+      periodicIO.accelZ = accelerometer.getZ();
     }
 
   public void writePeriodicOutputs()
   {
-    SmartDashboard.putNumber(this.getName() + " velocity RPM", mPeriodicIO.encoder);
+    SmartDashboard.putNumber(this.getName() + " velocity RPM", periodicIO.encoder);
     printSpeed.run();
     // gyro.displayGyro(); // get the GYRO values
     SmartDashboard.putNumber("Tilt X-Z", tiltXZ() );
@@ -211,8 +212,8 @@ public class DriveSubsystem extends Subsystem4237 {
     // method to display stuff
     printSpeed = () ->
     {
-      SmartDashboard.putNumber("%VBus", mPeriodicIO.PctOutput);
-      SmartDashboard.putNumber("bus voltage", mPeriodicIO.busVoltage);
+      SmartDashboard.putNumber("%VBus", periodicIO.PctOutput);
+      SmartDashboard.putNumber("bus voltage", periodicIO.busVoltage);
     };
     return errors == 0;
   }
@@ -265,8 +266,8 @@ public class DriveSubsystem extends Subsystem4237 {
             // define the command to execute
             () -> {
               if(!DriverStation.isAutonomous()) // ignore joystick during auto
-                setTestMotorPctVBus.accept(mPeriodicIO.driverControllerLeftX);
-                SmartDashboard.putNumber("DriverControllerLeftX", mPeriodicIO.driverControllerLeftX);
+                setTestMotorPctVBus.accept(periodicIO.driverControllerLeftX);
+                SmartDashboard.putNumber("DriverControllerLeftX", periodicIO.driverControllerLeftX);
             },
             // requirement required for a default command - maybe not needed in 2023
             DriveSubsystem.this
@@ -280,7 +281,7 @@ public class DriveSubsystem extends Subsystem4237 {
   public double tiltXZ()
   {
     // var angleXY = Math.atan2(mPeriodicIO.accelX, mPeriodicIO.accelY);
-    var angleXZ = Math.atan2(mPeriodicIO.accelX, mPeriodicIO.accelZ);
+    var angleXZ = Math.atan2(periodicIO.accelX, periodicIO.accelZ);
     // var angleYZ = Math.atan2(mPeriodicIO.accelY, mPeriodicIO.accelZ);
     return angleXZ*360./(2.*Math.PI);
   }

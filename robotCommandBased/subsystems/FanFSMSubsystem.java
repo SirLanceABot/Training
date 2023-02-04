@@ -19,7 +19,8 @@ import edu.wpi.first.wpilibj2.command.button.Trigger;
 
 import static frc.robot.Constants.FanFSM.*;
 
-public class FanFSMSubsystem  extends Subsystem4237 {
+public class FanFSMSubsystem  extends Subsystem4237
+{
 
 //////////////////////////////////////////////////////////////////////////////
 //////////// SETUP FSM ///////////////////////////////////////////////////////
@@ -30,6 +31,10 @@ public class FanFSMSubsystem  extends Subsystem4237 {
    */
   private PeriodicIO periodicIO;
   private XboxController driverController;
+  FanFSMSubsystem()
+  {
+    registerPeriodicIO();
+  }
   
   @Override
   public void readPeriodicInputs()

@@ -1,39 +1,36 @@
-/**
- * Define methods to read all inputs at once (well, sequentially) and
- * similarly write all outputs at once for all registered Subsystem4237
- */
 package frc.robot.subsystems;
 
-import java.util.ArrayList;
+import java.lang.invoke.MethodHandles;
 
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import frc.robot.PeriodicIO;
 
-public abstract class Subsystem4237 extends SubsystemBase
+/**
+ * This abstract class will be extended for every subsystem on the robot. 
+ * Every subsystem will automatically be added to the array list for periodic inputs and outputs.
+ */
+public abstract class Subsystem4237 extends SubsystemBase implements PeriodicIO
 {
-    // list of all registered SubsystemTeam classes
-    private final static ArrayList<Subsystem4237> subsystemArrayList = new ArrayList<Subsystem4237>();
-    
+    // This string gets the full name of the class, including the package name
+    private static final String fullClassName = MethodHandles.lookup().lookupClass().getCanonicalName();
+
+    // *** STATIC INITIALIZATION BLOCK ***
+    // This block of code is run first when the class is loaded
+    static
+    {
+        System.out.println("Loading: " + fullClassName);
+    }
+
+    // *** CLASS CONSTRUCTOR ***
     public Subsystem4237()
     {
-        super(); // do the usual WPILib stuff first
-        subsystemArrayList.add( (Subsystem4237) this ); // register this subsystem for our periodicIO
+        super();
+
+        // Register this subsystem in the array list for periodic inputs and outputs.
+        registerPeriodicIO();
     }
 
-    abstract public void readPeriodicInputs(); // force others to have this implemented
-
-    abstract public void writePeriodicOutputs(); // force others to have this implemented
-
-    // read inputs for all registered subsystems
-    public static void readPeriodic()
-    {
-      subsystemArrayList.forEach( (subsystem) -> subsystem.readPeriodicInputs() );
-    }
-  
-    // write outputs for all registered subsystems
-    public static void writePeriodic()
-    {
-      subsystemArrayList.forEach( (subsystem) -> subsystem.writePeriodicOutputs() );
-    }
-
+    // Abstract methods to override in subclasses
+    public abstract void readPeriodicInputs();
+    public abstract void writePeriodicOutputs();
 }
-

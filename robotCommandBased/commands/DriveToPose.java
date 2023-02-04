@@ -19,7 +19,7 @@ public class DriveToPose extends CommandBase {
     {
         this.driveSubsystem = driveSubsystem;
         
-        startEncoder = this.driveSubsystem.mPeriodicIO.encoder;
+        startEncoder = this.driveSubsystem.periodicIO.encoder;
         stopEncoder = startEncoder + distance;
 
         // startAngle = this.driveSubsystem.mPeriodicIO.angle;

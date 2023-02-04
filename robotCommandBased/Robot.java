@@ -9,7 +9,6 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 
 import static frc.robot.RobotContainer.AutoChoice;
-import frc.robot.subsystems.Subsystem4237;
 
 // order of execution: previous_modeExit, modeInit, modePeriodic, robotPeriodic
 
@@ -54,9 +53,9 @@ class Robot extends TimedRobot {
   @Override
   public void robotPeriodic() 
   {
-    Subsystem4237.readPeriodic();         // 1st
+    PeriodicIO.readInputs();         // 1st
     CommandScheduler.getInstance().run(); // 2nd
-    Subsystem4237.writePeriodic();        // 3rd
+    PeriodicIO.writeOutputs();        // 3rd
   }
 
   /** This function is called once each time the robot enters Disabled mode. */

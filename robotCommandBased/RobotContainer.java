@@ -574,3 +574,17 @@ private final Accelerometer accelerometer = new BuiltInAccelerometer(Acceleromet
 //           innerMagazine.magazineStop();
 //           outerMagazine.magazineStop();
 //       }));
+
+
+// driveSubsystem    = (useFullRobot || useDrive    ? instantiateSubsystem(new DriveSubsystem(driverController))    : null);
+// /**
+//    * Add instantiation of a subsystem to the mass periodic I/O scheme
+//    * @param <T> class type of subsystem
+//    * @param instantiated subsystem object
+//    * @return object then can be assigned to a variable
+//    */
+//   <T> T instantiateSubsystem(T subsystem)
+//   { 
+//     m_subsystemArrayList.add((SubsystemTeam) subsystem);
+//     return subsystem;
+//   }

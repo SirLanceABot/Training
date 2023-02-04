@@ -5,10 +5,13 @@ import edu.wpi.first.wpilibj2.command.CommandBase;
 import edu.wpi.first.wpilibj2.command.RunCommand;
 import edu.wpi.first.wpilibj2.command.WaitCommand;
 
-public class TemplateSubsystem  extends Subsystem4237{
+public class TemplateSubsystem  extends Subsystem4237
+{
 
   public TemplateSubsystem(XboxController driverController) // pass in all the stuff this class needs from above
     {
+      registerPeriodicIO();
+      
       periodicIO = new PeriodicIO(); // all the inputs appear here
       
       this.driverController = driverController;  // example, pass in all the stuff this class needs from above
