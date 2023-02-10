@@ -4,6 +4,8 @@ import java.lang.invoke.MethodHandles;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
+import edu.wpi.first.util.datalog.DataLog;
+import edu.wpi.first.util.datalog.DoubleLogEntry;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.XboxController;
@@ -28,27 +30,34 @@ public class FlywheelSubsystem extends Subsystem4237
   }
 
   private int printCount;
+  private DataLog log;
 
-  public FlywheelSubsystem(XboxController driverController)
+  public FlywheelSubsystem(XboxController driverController, DataLog log)
   {
     registerPeriodicIO();
     createFlywheelMotorController(parameterSetAttemptCount);
     periodicIO = new PeriodicIO(); // all the inputs and outputs appear here
     this.driverController = driverController; // example, pass in all the stuff this class needs from above
     printCount = 0;
+
+    this.log = log;
+    logEncodersInit();
   }
 
   @Override
   public void readPeriodicInputs()
   {
       // populate each input variable
-        periodicIO.velocity = getFlywheelSpeed.get();
+        periodicIO.position = getFlywheelSpeed.get();
+        periodicIO.velocity = getFlywheelPosition.get();
         periodicIO.PctOutput = getPctOutput.get();
   }
 
   @Override
   public void writePeriodicOutputs()
   {
+    logEncoders();
+
     if(++printCount >= 25)
     {
       SmartDashboard.putNumber(this.getName() + " RPM", periodicIO.velocity);
@@ -75,6 +84,7 @@ public class FlywheelSubsystem extends Subsystem4237
 
   private class PeriodicIO {
     // INPUTS
+    private double position;
     private double velocity;
     private double PctOutput;
     // OUTPUTS
@@ -132,6 +142,7 @@ public class FlywheelSubsystem extends Subsystem4237
   Runnable printSpeed;
   public Consumer<Double> setFlywheelSpeed;
   public Supplier<Double> getFlywheelSpeed;
+  public Supplier<Double> getFlywheelPosition;
   public Supplier<Double> getSpeedError;
   public Consumer<Double> setFlywheelPctVBus;
   public Supplier<Double> getPctOutput;
@@ -281,8 +292,15 @@ public class FlywheelSubsystem extends Subsystem4237
       getFlywheelSpeed = () ->
       {
         var speed = flywheelMotor.getSelectedSensorVelocity(pidIdx);
-        check(flywheelMotor, "get sensor error", false);
+        check(flywheelMotor, "get sensor vel error", false);
         return speed;
+      };
+
+      getFlywheelPosition = () ->
+      {
+        var position = flywheelMotor.getSelectedSensorPosition(pidIdx);
+        check(flywheelMotor, "get sensor pos error", false);
+        return position;
       };
 
       getSpeedError = () ->
@@ -351,4 +369,45 @@ public class FlywheelSubsystem extends Subsystem4237
     }
     return rc == ErrorCode.OK ? 0 : 1;
   }// You can also check to see if the controller has rebooted and refresh configs that may have been lost
+
+  DoubleLogEntry flsLogEntry;
+  DoubleLogEntry frsLogEntry;
+  DoubleLogEntry blsLogEntry;
+  DoubleLogEntry brsLogEntry;
+  DoubleLogEntry fldLogEntry;
+  DoubleLogEntry frdLogEntry;
+  DoubleLogEntry bldLogEntry;
+  DoubleLogEntry brdLogEntry;
+
+  /**
+   * datalog
+   */
+
+   void logEncodersInit()
+   {
+
+    String EncoderName = new String("/SwerveEncoders/"); // make a prefix tree structure for the ultrasonic data
+    // f front; b back; r right; l left; s steer; d drive
+    flsLogEntry = new DoubleLogEntry(log, EncoderName+"fls", "RawCounts");
+    frsLogEntry = new DoubleLogEntry(log, EncoderName+"frs", "RawCounts");
+    blsLogEntry = new DoubleLogEntry(log, EncoderName+"bls", "RawCounts");
+    brsLogEntry = new DoubleLogEntry(log, EncoderName+"brs", "RawCounts");
+    fldLogEntry = new DoubleLogEntry(log, EncoderName+"fld", "RawCounts");
+    frdLogEntry = new DoubleLogEntry(log, EncoderName+"frd", "RawCounts");
+    bldLogEntry = new DoubleLogEntry(log, EncoderName+"bld", "RawCounts");
+    brdLogEntry = new DoubleLogEntry(log, EncoderName+"brd", "RawCounts");
+   }
+
+  void logEncoders()
+  {
+    var time = System.currentTimeMillis();
+    flsLogEntry.append(getFlywheelPosition.get()*1.0, time);
+    frsLogEntry.append(getFlywheelPosition.get()*1.1, time);
+    blsLogEntry.append(getFlywheelPosition.get()*1.2, time);
+    brsLogEntry.append(getFlywheelPosition.get()*1.3, time);
+    fldLogEntry.append(getFlywheelPosition.get()*1.4, time);
+    frdLogEntry.append(getFlywheelPosition.get()*1.5, time);
+    bldLogEntry.append(getFlywheelPosition.get()*1.6, time);
+    brdLogEntry.append(getFlywheelPosition.get()*1.7, time);
+  }
 }

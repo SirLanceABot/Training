@@ -83,8 +83,8 @@ The roboRIO comment is >PRETTY_HOSTNAME="Programmers' Tub 1"
 // activate or not debug logging
 // activate or not debug logging
 
-  private boolean useDataLog         = false; // this uses space on roboRIO which runs out after some time of logging
-  private boolean useShuffleBoardLog = false; // record a ShuffleBoard session then you convert playback to view
+  private boolean useDataLog         = true; // this uses space on roboRIO which runs out after some time of logging
+  private boolean useShuffleBoardLog = true; // record a ShuffleBoard session then you convert playback to view
 
 // activate or not selected subsystems
 // activate or not selected subsystems
@@ -101,7 +101,6 @@ The roboRIO comment is >PRETTY_HOSTNAME="Programmers' Tub 1"
 
 private final XboxController driverController = new XboxController(driverControllerID);
 private final Accelerometer accelerometer = new BuiltInAccelerometer(Accelerometer.Range.k2G);
-  // private final ArrayList<SubsystemTeam> m_subsystemArrayList = new ArrayList<SubsystemTeam>();
 
   /////////////////////////////////////////
   // SUBSYSTEMS
@@ -115,8 +114,9 @@ private final Accelerometer accelerometer = new BuiltInAccelerometer(Acceleromet
 
 
   // WPILog
+  DataLog log;
   StringLogEntry commandLogEntry;
-
+  
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
 
   RobotContainer() {
@@ -125,16 +125,20 @@ private final Accelerometer accelerometer = new BuiltInAccelerometer(Acceleromet
     {
       // DataLog log = new DataLog("/home/lvuser", "MyUStestLog"+System.currentTimeMillis()+".wpilog");
       DataLogManager.start();
-      DataLog log = DataLogManager.getLog();
+      log = DataLogManager.getLog();
+
       var name = new String("/Commands/"); // make a prefix tree structure for the data
+
       commandLogEntry = new StringLogEntry(log, name+"events", "Event");
+
+      // DataLog log = new DataLog("/home/lvuser", "MyUStestLog"+System.currentTimeMillis()+".wpilog");
     }
 
     if(!useFullRobot) DriverStation.reportWarning("NOT USING FULL ROBOT", false);
     
     exampleSubsystem  = (useFullRobot || useExample  ? new ExampleSubsystem()                  : null);
     driveSubsystem    = (useFullRobot || useDrive    ? new DriveSubsystem(driverController, accelerometer)  : null);
-    flywheelSubsystem = (useFullRobot || useFlywheel ? new FlywheelSubsystem(driverController) : null);
+    flywheelSubsystem = (useFullRobot || useFlywheel ? new FlywheelSubsystem(driverController, log) : null);
     fanFSMSubsystem   = (useFullRobot || useFanFSM   ? new FanFSMSubsystem(driverController)   : null);
     
     // autonomous component
