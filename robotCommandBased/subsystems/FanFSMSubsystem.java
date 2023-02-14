@@ -33,7 +33,7 @@ public class FanFSMSubsystem  extends Subsystem4237
   private XboxController driverController;
   FanFSMSubsystem()
   {
-    registerPeriodicIO();
+    super();
   }
   
   @Override
