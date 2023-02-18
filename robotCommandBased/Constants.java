@@ -32,7 +32,7 @@ public final class Constants {
     public static class Flywheel
     {
         public static final double kAutoSpinupRPM = 600.;
-        public static final double kAutoTime = 10.;
+        public static final double kAutoTime = 2.;
         public static final double kDriverButtonFlywheelSpeed = 500.; // establish the shooter flywheel start/stop button at speed
     }
 

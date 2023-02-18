@@ -1,16 +1,16 @@
 package frc.robot.commands;
 
+import static edu.wpi.first.wpilibj2.command.Commands.print;
+import static edu.wpi.first.wpilibj2.command.Commands.runOnce;
+import static edu.wpi.first.wpilibj2.command.Commands.sequence;
+
 import java.lang.invoke.MethodHandles;
 
-import edu.wpi.first.wpilibj2.command.Command;
-import edu.wpi.first.wpilibj2.command.InstantCommand;
-import edu.wpi.first.wpilibj2.command.PrintCommand;
-import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
+import edu.wpi.first.wpilibj2.command.CommandBase;
 import edu.wpi.first.wpilibj2.command.WaitCommand;
-
 import frc.robot.subsystems.FlywheelSubsystem;
 
-public class Autonomous2Command extends SequentialCommandGroup
+public class Autonomous2Command extends CommandBase
 {
   static
   {
@@ -23,20 +23,25 @@ public class Autonomous2Command extends SequentialCommandGroup
 
   public Autonomous2Command(FlywheelSubsystem flywheelSubsystem)
   {
-    this.flywheelSubsystem = flywheelSubsystem;
-    addRequirements(flywheelSubsystem); //all subsystems that might be used in any command in the group
+     this.flywheelSubsystem = flywheelSubsystem;
+
+  // I don't think this actually adds requirements if this class isn't run as a command. What are the references?
+  // Since there are no Command methods the default isFinished() is false and thus runs forever.
+
+  //   addRequirements(flywheelSubsystem); //all subsystems that might be used in any command in the group
+
     testit = new SpinupFlywheelCommand(flywheelSubsystem, 0.);
   }
 
   // build command from other commands and return the single big command
-  public Command get()
+  public CommandBase get()
   {
-   return new SequentialCommandGroup
+   return sequence
         (
           new SpinupFlywheelCommand( flywheelSubsystem, 300. ) .withTimeout(10.)
-         ,new InstantCommand(()->System.out.println("IC 1"))
+         ,runOnce(()->System.out.println("IC 1")) // print is better
          ,testSeqGrpCommand.raceWith(new WaitCommand(5.))
-         ,new PrintCommand("IC 2")
+         ,print("IC 2")
          ,new SpinupFlywheelCommand( flywheelSubsystem, 1000. ) .withTimeout(8.)
          ,testit.spinAtSpeed(500.) .withTimeout(4.)
         );

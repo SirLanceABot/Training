@@ -9,6 +9,9 @@ import java.lang.invoke.MethodHandles;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
+import static edu.wpi.first.wpilibj2.command.Commands.run;
+import static edu.wpi.first.wpilibj2.command.Commands.runOnce;
+
 import edu.wpi.first.util.datalog.DataLog;
 import edu.wpi.first.util.datalog.StringLogEntry;
 import edu.wpi.first.wpilibj.BuiltInAccelerometer;
@@ -22,6 +25,7 @@ import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.CommandBase;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.PrintCommand;
@@ -239,7 +243,7 @@ private final Accelerometer accelerometer = new BuiltInAccelerometer(Acceleromet
    */
   Command getAutonomousCommand(AutoChoice autoChoice)
   {
-    Command autoCommand;
+    CommandBase autoCommand;
 
     switch(autoChoice)
     {
@@ -271,8 +275,8 @@ private final Accelerometer accelerometer = new BuiltInAccelerometer(Acceleromet
                   break;
 
       case kAuto7:
-                  autoCommand = new RunCommand // run repeatedly
-                    ( driveSubsystem::DriveStraightSlowly, driveSubsystem )
+                  autoCommand =
+                     run( driveSubsystem::DriveStraightSlowly, driveSubsystem ) // run execute repeatedly
                     .withTimeout( autoMinimalMoveTime)
                     .andThen( driveSubsystem.testLambda ) // typed Runnable since no parm no return
                     .andThen( driveSubsystem::TestMethod ) // method no parm no return is implied Runnable; no requirements so 1st arg is assumed a command
@@ -281,20 +285,19 @@ private final Accelerometer accelerometer = new BuiltInAccelerometer(Acceleromet
                     .andThen( driveSubsystem::DriveStop, driveSubsystem ) // only executed once; make RunCommand to multi-execute
                     .andThen( driveSubsystem::DriveStop, driveSubsystem ) // only executed once; make RunCommand to multi-execute
                     .andThen( driveSubsystem::DriveStop, driveSubsystem ) // only executed once; make RunCommand to multi-execute
-                                                                        // or duplicate the individuals a few times to make sure it stops
+                                                                             // or duplicate the individuals a few times to make sure it stops
                     ;
                   break;
 
       case kAuto8:
-                  autoCommand =  new InstantCommand
-                  (
-                    ()->
-                    {
-                      var message = "No autonomous command set";
-                      DriverStation.reportWarning(message, false);
-                    }
-                    /*no other subsystems required to display the message*/
-                  );
+                  autoCommand =
+                    runOnce( ()->
+                      {
+                        var message = "No autonomous command set";
+                        DriverStation.reportWarning(message, false);
+                      }
+                      /*no other subsystems required to display the message*/
+                    );
                   break;
         
       default:
@@ -409,6 +412,12 @@ private final Accelerometer accelerometer = new BuiltInAccelerometer(Acceleromet
 //_________________________________________________________________________________
   }
 }
+
+// In the sequential command group constructor, you can make PPSwerveControllerCommand
+// for every segment of the path you want it to follow, then you can call each of them in
+// the sequential command group.
+
+
 
 // NOTE CommandGroupBase deprecated and replaced by statics in Commands
 // CommandGroupBase.clearGroupedCommands();

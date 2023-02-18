@@ -48,8 +48,8 @@ public class FlywheelSubsystem extends Subsystem4237
   public void readPeriodicInputs()
   {
       // populate each input variable
-        periodicIO.position = getFlywheelSpeed.get();
-        periodicIO.velocity = getFlywheelPosition.get();
+        periodicIO.position = getFlywheelPosition.get();
+        periodicIO.velocity = getFlywheelSpeed.get();
         periodicIO.PctOutput = getPctOutput.get();
   }
 
@@ -401,13 +401,13 @@ public class FlywheelSubsystem extends Subsystem4237
   void logEncoders()
   {
     var time = System.currentTimeMillis();
-    flsLogEntry.append(getFlywheelPosition.get()*1.0, time);
-    frsLogEntry.append(getFlywheelPosition.get()*1.1, time);
-    blsLogEntry.append(getFlywheelPosition.get()*1.2, time);
-    brsLogEntry.append(getFlywheelPosition.get()*1.3, time);
-    fldLogEntry.append(getFlywheelPosition.get()*1.4, time);
-    frdLogEntry.append(getFlywheelPosition.get()*1.5, time);
-    bldLogEntry.append(getFlywheelPosition.get()*1.6, time);
-    brdLogEntry.append(getFlywheelPosition.get()*1.7, time);
+    flsLogEntry.append(getFlywheelPosition.get()*1.0);
+    frsLogEntry.append(getFlywheelPosition.get()*1.1);
+    blsLogEntry.append(getFlywheelPosition.get()*1.2);
+    brsLogEntry.append(getFlywheelPosition.get()*1.3);
+    fldLogEntry.append(getFlywheelPosition.get()*1.4);
+    frdLogEntry.append(getFlywheelPosition.get()*1.5);
+    bldLogEntry.append(getFlywheelPosition.get()*1.6);
+    brdLogEntry.append(getFlywheelPosition.get()*1.7);
   }
 }

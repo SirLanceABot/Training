@@ -1,10 +1,12 @@
 package frc.robot.commands;
 
+
+import static edu.wpi.first.wpilibj2.command.Commands.waitSeconds;
+import static edu.wpi.first.wpilibj2.command.Commands.print;
+
 import java.lang.invoke.MethodHandles;
 
 import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
-// import edu.wpi.first.wpilibj2.command.WaitCommand;
-import edu.wpi.first.wpilibj2.command.WaitCommand;
 
 public class TestSeqGrpCommand extends SequentialCommandGroup {
     static
@@ -15,8 +17,9 @@ public class TestSeqGrpCommand extends SequentialCommandGroup {
     public TestSeqGrpCommand()
     {
         addCommands(
-            new WaitCommand(1.)
-           ,new WaitCommand(2.)/*.deadlineWith(new spinupMotor(motorSubsystem, 100.))*/
+            waitSeconds(1.)
+            ,print("between waits")
+           ,waitSeconds(2.)/*.deadlineWith(new spinupMotor(motorSubsystem, 100.))*/
         );
     }
 }

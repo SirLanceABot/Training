@@ -1,17 +1,17 @@
 package frc.robot.commands;
 
+import static edu.wpi.first.wpilibj2.command.Commands.parallel;
+import static edu.wpi.first.wpilibj2.command.Commands.print;
+import static edu.wpi.first.wpilibj2.command.Commands.runOnce;
+import static edu.wpi.first.wpilibj2.command.Commands.sequence;
+import static edu.wpi.first.wpilibj2.command.Commands.waitSeconds;
+
 import java.lang.invoke.MethodHandles;
 
-import edu.wpi.first.wpilibj2.command.Command;
-import edu.wpi.first.wpilibj2.command.InstantCommand;
-import edu.wpi.first.wpilibj2.command.ParallelRaceGroup;
-import edu.wpi.first.wpilibj2.command.PrintCommand;
-import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
-import edu.wpi.first.wpilibj2.command.WaitCommand;
-
+import edu.wpi.first.wpilibj2.command.CommandBase;
 import frc.robot.subsystems.FlywheelSubsystem;
 
-public class Autonomous1Command extends SequentialCommandGroup
+public class Autonomous1Command
 {
   static
   {
@@ -25,42 +25,48 @@ public class Autonomous1Command extends SequentialCommandGroup
   public Autonomous1Command(FlywheelSubsystem flywheelSubsystem)
   {
     this.flywheelSubsystem = flywheelSubsystem;
-    addRequirements(flywheelSubsystem); //all subsystems that might be used in any command in the group
     testit = new SpinupFlywheelCommand(flywheelSubsystem, 0.);
   }
 
   // build command from other commands and return the single big command
-  public Command get()
+  public CommandBase get()
   {
-   return new SequentialCommandGroup
+    var alt = true;
+    
+    if(alt)
+    return new SpinupFlywheelWPILibPIDcommand(3500., flywheelSubsystem);
+ 
+    else
+    return sequence
         (
           new SpinupFlywheelCommand( flywheelSubsystem, 300. ) .withTimeout(5.)
 
-         ,new InstantCommand( ()->System.out.println("IC 1") )
+         ,runOnce( ()->System.out.println("IC 1") ) // print() is better
 
-         ,new WaitCommand(6.)
+         ,waitSeconds(6.)
          
-         ,new ParallelRaceGroup(
+         ,parallel(
                testSeqGrpCommand
-              ,new WaitCommand(1.))
+              ,waitSeconds(1.)) // runs a minimum of seconds
 
-          // same as the above ParallelRaceGroup but possibly less obvious   
-          //  ,testSeqGrpCommand
-          //     .raceWith(
-          //   new WaitCommand(5.))
+         ,print("IC 2")
 
-         ,new InstantCommand(() -> System.out.println("IC 2"))
-
-         ,new PrintCommand("testing PrintCommand -  it's really identical to above print command")
-
-         ,new WaitCommand(2.)
+         ,waitSeconds(2.)
          
-         ,new SpinupFlywheelCommand( flywheelSubsystem, 1000. ).withTimeout(6.)
+         ,new SpinupFlywheelCommand( flywheelSubsystem, 1000. ) .withTimeout(6.)
 
-         ,testit.spinAtSpeed(500.) .withTimeout(4.)
+         ,testit.spinAtSpeed(500.) .withTimeout(4.) // sets speed and returns the command object
         );
   }
 }
+
+// But lets say you want a command that runs as long as a button is pressed and do an action when its stopped
+// <button>.whileTrue(<commandWithFinishCriteria>)
+//         .whenFalse(<finalizationCommand>);
+// You could also do this:
+// button.whileTrue(Commands.run(runningAction).finallyDo(onCancelAction)));
+// (add an until in there if you want the command to be able to finish itself)
+
 
 // public class RobotContainer {
 //   // The driver's controller
