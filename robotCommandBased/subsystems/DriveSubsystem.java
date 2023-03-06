@@ -37,6 +37,7 @@ public class DriveSubsystem extends Subsystem4237
       public double busVoltage;
       public double voltageCompensation;
       public double velocity;
+      public double position;
       public double driverControllerLeftX;
       public double encoder;
       public double accelX;
@@ -50,6 +51,7 @@ public class DriveSubsystem extends Subsystem4237
   XboxController driverController;
   Accelerometer accelerometer;
   Supplier<Double> getVelocity;
+  Supplier<Double> getPosition;
   Runnable printSpeed;
   Consumer<Double> setTestMotorPctVBus;
   Supplier<Double> getPctOutput;
@@ -75,6 +77,7 @@ public class DriveSubsystem extends Subsystem4237
       periodicIO.busVoltage = getBusVoltage.get();
       periodicIO.voltageCompensation = getVoltageCompensation.get();
       periodicIO.encoder = getVelocity.get();
+      periodicIO.position = getPosition.get();
       periodicIO.driverControllerLeftX = driverController.getLeftX();
       periodicIO.accelX = accelerometer.getX();
       periodicIO.accelY = accelerometer.getY();
@@ -87,6 +90,7 @@ public class DriveSubsystem extends Subsystem4237
     printSpeed.run();
     // gyro.displayGyro(); // get the GYRO values
     SmartDashboard.putNumber("Tilt X-Z", tiltXZ() );
+    // System.out.println(periodicIO.position);
   }
   
   @Override
@@ -114,8 +118,16 @@ public class DriveSubsystem extends Subsystem4237
 
     getVelocity = () ->
     {
-      var velocity = encoder.getVelocity(); // apparently no way to check last error
+      var velocity = encoder.getVelocity();
+      check(testMotor, "get velocity error", false);
       return velocity;
+    };
+
+    getPosition = () ->
+    {
+      var position = encoder.getPosition();
+      check(testMotor, "get position error", false);
+      return position;
     };
 
     int setAttemptNumber = 0;
@@ -164,8 +176,8 @@ public class DriveSubsystem extends Subsystem4237
     testMotor.setPeriodicFramePeriod(PeriodicFrame.kStatus1, statusFrame1Periodms); // 20
     errors += check(testMotor, "set status frame 1 period", true);
 
-    testMotor.setPeriodicFramePeriod(PeriodicFrame.kStatus2, statusFrame2Periodms); // 50
-    errors += check(testMotor, "set status frame 2 period", true);
+    // testMotor.setPeriodicFramePeriod(PeriodicFrame.kStatus2, statusFrame2Periodms); // 20
+    // errors += check(testMotor, "set status frame 2 period", true);
 
     // testMotor.setPeriodicFramePeriod(PeriodicFrame.kStatus3, 5); // not used?
     // errors += check(testMotor, "set status frame 3 period", true);

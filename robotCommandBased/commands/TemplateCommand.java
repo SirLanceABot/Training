@@ -17,7 +17,7 @@ After calling a decorator or being passed to a composition, the command object c
  be reused! Use only the command object returned from the decorator.
 -----------------
 
-Control Algorithm Commands
+Control Algorithm Commands
 There are commands for various control setups:
 
 PIDCommand uses a PID controller. For more info, see PIDCommand.
@@ -35,7 +35,7 @@ SwerveControllerCommand (Java, C++) is useful for controlling swerve drivetrains
  API docs and the SwerveControllerCommand (Java, C++) example project for more info.
 
 RamseteCommand (Java, C++) is useful for path following with differential drivetrains
- (“tank drive”). See API docs and the Trajectory Tutorial for more info.
+ (tank drive). See API docs and the Trajectory Tutorial for more info.
 
 
 -------------
@@ -94,6 +94,22 @@ even every cycle and that type of command would run indefinitely
  */
 
 package frc.robot.commands;
+
+import static edu.wpi.first.wpilibj2.command.Commands.deadline;
+import static edu.wpi.first.wpilibj2.command.Commands.either;
+import static edu.wpi.first.wpilibj2.command.Commands.none;
+import static edu.wpi.first.wpilibj2.command.Commands.parallel;
+import static edu.wpi.first.wpilibj2.command.Commands.print;
+import static edu.wpi.first.wpilibj2.command.Commands.race;
+import static edu.wpi.first.wpilibj2.command.Commands.repeatingSequence;
+import static edu.wpi.first.wpilibj2.command.Commands.run; // allows requirements
+import static edu.wpi.first.wpilibj2.command.Commands.runEnd; // allows requirements
+import static edu.wpi.first.wpilibj2.command.Commands.runOnce; // allows requirements
+import static edu.wpi.first.wpilibj2.command.Commands.select;
+import static edu.wpi.first.wpilibj2.command.Commands.sequence;
+import static edu.wpi.first.wpilibj2.command.Commands.startEnd; // allows requirements
+import static edu.wpi.first.wpilibj2.command.Commands.waitSeconds;
+import static edu.wpi.first.wpilibj2.command.Commands.waitUntil;
 
 import java.lang.invoke.MethodHandles;
 

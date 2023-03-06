@@ -245,7 +245,7 @@ public class FlywheelSubsystem extends Subsystem4237
       configs.neutralDeadband = neutralDeadband;
 
       configs.primaryPID.selectedFeedbackSensor = TalonFXFeedbackDevice.IntegratedSensor.toFeedbackDevice();
-
+configs.voltageMeasurementFilter = 4;
       configs.velocityMeasurementWindow = filterWindow;
       configs.velocityMeasurementPeriod = filterPeriod;
       configs.slot0.kP = kP;

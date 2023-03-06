@@ -25,6 +25,7 @@ public final class Constants {
         public static final int configRetries = 5;
         public static final int statusFrame0Periodms = 10;
         public static final int statusFrame1Periodms = 20;
+// statusFrame2Periodms position/velocity period about twice this value; min possible is about 40ms (the default or <= 20ms specified here)
         public static final int statusFrame2Periodms = 20;
         public static final double DriveStraightSlowlySpeed = 0.25;
     }

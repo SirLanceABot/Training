@@ -67,7 +67,8 @@ public class Autonomous5Command extends SequentialCommandGroup
               }
             }
             /*no other subsystems required to display the message*/
-          ).withTimeout(timeout) //FIXME worse idea - this timeout does not work on InstantCommands
+          ).withTimeout(timeout) //FIXME worse idea - timeout does not do anything on InstantCommands
+          // and you must not be doing anything that needs a timeout - nothing repetitive
     );
   }
 }

@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.lang.invoke.MethodHandles;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.function.BooleanSupplier;
 
 import static edu.wpi.first.wpilibj2.command.Commands.run;
 import static edu.wpi.first.wpilibj2.command.Commands.runOnce;
@@ -27,12 +28,15 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandBase;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
+import edu.wpi.first.wpilibj2.command.Commands;
+import edu.wpi.first.wpilibj2.command.FunctionalCommand;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.PrintCommand;
 import edu.wpi.first.wpilibj2.command.RunCommand;
 import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
+import edu.wpi.first.wpilibj2.command.Subsystem;
 import edu.wpi.first.wpilibj2.command.button.JoystickButton;
-
+import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.commands.Autonomous1Command;
 import frc.robot.commands.Autonomous2Command;
 import frc.robot.commands.Autonomous3Command;
@@ -87,15 +91,15 @@ The roboRIO comment is >PRETTY_HOSTNAME="Programmers' Tub 1"
 // activate or not debug logging
 // activate or not debug logging
 
-  private boolean useDataLog         = true; // this uses space on roboRIO which runs out after some time of logging
-  private boolean useShuffleBoardLog = true; // record a ShuffleBoard session then you convert playback to view
+  private boolean useDataLog         = false; // this uses space on roboRIO which runs out after some time of logging
+  private boolean useShuffleBoardLog = false; // record a ShuffleBoard session then you convert playback to view
 
 // activate or not selected subsystems
 // activate or not selected subsystems
 // activate or not selected subsystems
 
-  private boolean useFullRobot       = true; // true implies all the rest are true; don't use "final" to prevent dead code messages
-  private boolean useDrive           = false;
+  private boolean useFullRobot       = false; // true implies all the rest are true; don't use "final" to prevent dead code messages
+  private boolean useDrive           = true;
   private boolean useFlywheel        = false;
   private boolean useExample         = false;
   private boolean useFanFSM          = false;
@@ -161,7 +165,8 @@ private final Accelerometer accelerometer = new BuiltInAccelerometer(Acceleromet
     configDefaultSubsystemCommands();
 
     // display the autonomous command selector
-    configureAutoChooser();
+    if(autoChooser != null)
+      configureAutoChooser();
   }
 
   /**
@@ -232,7 +237,9 @@ private final Accelerometer accelerometer = new BuiltInAccelerometer(Acceleromet
    */
   AutoChoice getAutoChoice ()
   {
-    return autoChooser.getSelected();
+    if(autoChooser != null)
+        return autoChooser.getSelected();
+    else return null;
   }
 
   /**
@@ -391,6 +398,35 @@ private final Accelerometer accelerometer = new BuiltInAccelerometer(Acceleromet
           new PrintCommand("toggle X button flywheel"),
           new SpinupFlywheelCommand(flywheelSubsystem, kDriverButtonFlywheelSpeed)
         ) );
+
+
+      //Back Button
+      BooleanSupplier backButton = () -> driverController.getBackButton();
+      Trigger backButtonTrigger = new Trigger(backButton);
+      backButtonTrigger.onTrue( Commands.print("pressed Back") );
+
+      //A Button
+			BooleanSupplier aButton = () -> driverController.getAButton();
+			Trigger aButtonTrigger = new Trigger(aButton);
+			aButtonTrigger.whileTrue( Commands.print("pressed A") );
+
+      //A not back Button
+			Trigger NotBackButtonTrigger = backButtonTrigger.negate().and(aButtonTrigger);
+			NotBackButtonTrigger.whileTrue( Commands.print("pressed A not back") ); // use this for A
+
+      //Back and A
+      Trigger backandA = backButtonTrigger.and(aButtonTrigger);
+      backandA.onTrue( Commands.print("pressed both back and A") ); // use this for shift A
+      
+      //Back or A
+      Trigger backorA = backButtonTrigger.or(aButtonTrigger);
+      backorA.onTrue( 
+              new FunctionalCommand( // example of FunctionalCommand for fun and something different than above
+                ()->{System.out.println("initialize for pressed back or A");},
+                ()->{},
+                interrupt->{},
+                ()->true));
+     
 //_________________________________________________________________________________
 // The FanFSMSubsystem demonstrates traditional usage of getting the status of a
 // button with all the other PeriodIO values and using that value in the Fan FSM.
@@ -404,11 +440,11 @@ private final Accelerometer accelerometer = new BuiltInAccelerometer(Acceleromet
   private void configDefaultSubsystemCommands()
   {
 //_________________________________________________________________________________
-
-    driveSubsystem.setDefaultCommand( driveSubsystem.joystickDriveCommand() );
+    if(driveSubsystem != null)
+      driveSubsystem.setDefaultCommand( driveSubsystem.joystickDriveCommand() );
 //_________________________________________________________________________________
-
-    exampleSubsystem.setDefaultCommand( new ExampleSubsystemDefaultCommand(exampleSubsystem) );
+    if(exampleSubsystem != null)
+      exampleSubsystem.setDefaultCommand( new ExampleSubsystemDefaultCommand(exampleSubsystem) );
 //_________________________________________________________________________________
   }
 }
@@ -416,7 +452,6 @@ private final Accelerometer accelerometer = new BuiltInAccelerometer(Acceleromet
 // In the sequential command group constructor, you can make PPSwerveControllerCommand
 // for every segment of the path you want it to follow, then you can call each of them in
 // the sequential command group.
-
 
 
 // NOTE CommandGroupBase deprecated and replaced by statics in Commands
@@ -601,3 +636,32 @@ private final Accelerometer accelerometer = new BuiltInAccelerometer(Acceleromet
 //     m_subsystemArrayList.add((SubsystemTeam) subsystem);
 //     return subsystem;
 //   }
+
+
+
+// import edu.wpi.first.wpilibj.buttons.Button;
+// import edu.wpi.first.wpilibj.buttons.Trigger;
+
+// public class ExampleButton extends Trigger {
+
+//     Button a;
+//     Button b;
+
+//     public ExampleButton(Button a, Button b) {
+//         this.a = a;
+//         this.b = b;
+//     }
+
+//     @Override
+//     public boolean get() {
+//         return a.get() && b.get();
+//     }
+// }
+
+
+// public FunctionalCommand( // initialize execute end isFinished
+// Runnable onInit,
+// Runnable onExecute,
+// Consumer<Boolean> onEnd,
+// BooleanSupplier isFinished,
+// Subsystem... requirements)
