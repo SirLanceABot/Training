@@ -1,10 +1,12 @@
 package frc.robot;
 
 import java.lang.invoke.MethodHandles;
+import java.util.concurrent.atomic.AtomicReference;
 
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.livewindow.LiveWindow;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 
@@ -22,6 +24,11 @@ class Robot extends TimedRobot {
   private AutoChoice autoChoicePrevious = null;
   private RobotContainer robotContainer;
   
+  Thread m_visionThread;
+  GatherCamera gatherCamera;
+
+  public static AtomicReference<Double> yawTS = new AtomicReference<Double>(180.);
+
   Robot()
   {
     LiveWindow.disableAllTelemetry(); // don't waste time on stuff we don't need
@@ -36,6 +43,15 @@ class Robot extends TimedRobot {
     // Instantiate our RobotContainer.  This will perform all our button bindings, and put our
     // autonomous chooser on the dashboard.
     robotContainer = new RobotContainer();
+
+    gatherCamera = new GatherCamera();
+    m_visionThread = new Thread(gatherCamera, "GatherCamera");
+    m_visionThread.setDaemon(true);
+    m_visionThread.start();
+  
+    //FIXME: remove when gyro is used
+    SmartDashboard.putNumber("test yaw", 180.); // for testing without a gyro
+
   }
 
   /**
@@ -56,6 +72,10 @@ class Robot extends TimedRobot {
     PeriodicIO.readInputs();         // 1st
     CommandScheduler.getInstance().run(); // 2nd
     PeriodicIO.writeOutputs();        // 3rd
+    
+    //FIXME: replace below heading with gyro get yaw
+    var heading = SmartDashboard.getNumber("test yaw", 0.); // testing without a gyro
+    yawTS.set(heading);
   }
 
   /** This function is called once each time the robot enters Disabled mode. */
