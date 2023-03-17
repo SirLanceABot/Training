@@ -100,7 +100,7 @@ The roboRIO comment is >PRETTY_HOSTNAME="Programmers' Tub 1"
 
   private boolean useFullRobot       = false; // true implies all the rest are true; don't use "final" to prevent dead code messages
   private boolean useDrive           = true;
-  private boolean useFlywheel        = false;
+  private boolean useFlywheel        = true;
   private boolean useExample         = false;
   private boolean useFanFSM          = false;
 //_________________________________________________________________________________
@@ -391,14 +391,22 @@ private final Accelerometer accelerometer = new BuiltInAccelerometer(Acceleromet
   {
 //_________________________________________________________________________________
 
+    // Instantiate a command to be used below more than once
+    SpinupFlywheelCommand startFlywheel = new SpinupFlywheelCommand(flywheelSubsystem, kDriverButtonFlywheelSpeed);
+
     new JoystickButton(driverController, XboxController.Button.kX.value)
-      .toggleOnTrue( // 1st press starts command; 2nd press interrupts command
+      .toggleOnTrue( // 1st press starts command; 2nd press before 5 seconds interrupts/cancels command and the rest does not run
         new SequentialCommandGroup
         (
-          new PrintCommand("toggle X button flywheel"),
-          new SpinupFlywheelCommand(flywheelSubsystem, kDriverButtonFlywheelSpeed)
-        ) );
-
+          new PrintCommand("toggle X button flywheel"), // tell it started
+          startFlywheel.withTimeout(5.)
+          .andThen(Commands.print("startFlywheel ended")), // tell it stopped
+          Commands.either( // check for one of two ways the command returns (true or false; more choices are possible)
+            Commands.print("happy flywheel"), // command returned true
+            Commands.print("unhappy flywheel"), // command returned false
+            startFlywheel.isFlywheelHappy())
+        )
+         );
 
       //Back Button
       BooleanSupplier backButton = () -> driverController.getBackButton();

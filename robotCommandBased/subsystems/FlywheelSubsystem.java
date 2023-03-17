@@ -41,7 +41,7 @@ public class FlywheelSubsystem extends Subsystem4237
     printCount = 0;
 
     this.log = log;
-    logEncodersInit();
+    if(log != null) logEncodersInit();
   }
 
   @Override
@@ -56,7 +56,7 @@ public class FlywheelSubsystem extends Subsystem4237
   @Override
   public void writePeriodicOutputs()
   {
-    logEncoders();
+    if(log != null) logEncoders();
 
     if(++printCount >= 25)
     {

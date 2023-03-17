@@ -1,6 +1,7 @@
 package frc.robot.commands;
 
 import java.lang.invoke.MethodHandles;
+import java.util.function.BooleanSupplier;
 
 import edu.wpi.first.wpilibj2.command.CommandBase;
 
@@ -14,6 +15,7 @@ public class SpinupFlywheelCommand extends CommandBase {
 
   private FlywheelSubsystem flywheelSubsystem;
   private double speed;
+  private boolean flywheelHappy = true; // happy is the base state
 
   // command does not run if DISABLED
   
@@ -28,6 +30,7 @@ public class SpinupFlywheelCommand extends CommandBase {
     @Override
     public void initialize()
     {
+        flywheelHappy = true;
         System.out.println("SpinupFlywheel speed " + speed);   
     }
 
@@ -41,25 +44,30 @@ public class SpinupFlywheelCommand extends CommandBase {
     
     // Called once the command ends or is interrupted.
     @Override
-    public void end(boolean interrupted)// interrupted true for interrupted or false if the isFinished had been set to true
+    public void end(boolean interrupted) // interrupted true for interrupted or false if the isFinished had been set to true
       {
         System.out.println(
-          "end SpinupFlywheel speed " + speed + (interrupted?" interrupted":" stopped"));
-
-        flywheelSubsystem.setFlywheelPctVBus.accept(0.); // stop
+          "end SpinupFlywheel speed " + speed + (interrupted?" interrupted or cancelled - I'm dead":" stopped"));
+        flywheelSubsystem.setFlywheelPctVBus.accept(0.); // stop motor
+        flywheelHappy = false; // return code
       }
 
     // Returns true when the command should end.
     @Override
     public boolean isFinished() { // stub for now
       // if(at speed) return true;
-      // else
-      return false;
+      // else return false;
+      return false; // keep running (until others cancel command)
     }
 
     public SpinupFlywheelCommand spinAtSpeed(double speed)
     {
       this.speed = speed;
       return this;
+    }
+
+    public BooleanSupplier isFlywheelHappy()
+    {
+      return () -> flywheelHappy; // supply return code
     }
 }

@@ -47,7 +47,7 @@ class Robot extends TimedRobot {
     gatherCamera = new GatherCamera();
     m_visionThread = new Thread(gatherCamera, "GatherCamera");
     m_visionThread.setDaemon(true);
-    m_visionThread.start();
+    // m_visionThread.start();
   
     //FIXME: remove when gyro is used
     SmartDashboard.putNumber("test yaw", 180.); // for testing without a gyro
