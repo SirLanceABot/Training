@@ -37,6 +37,7 @@ import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
 import edu.wpi.first.wpilibj2.command.Subsystem;
 import edu.wpi.first.wpilibj2.command.button.JoystickButton;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
+import frc.robot.Sensors.apriltagVisionThreadProc;
 import frc.robot.commands.Autonomous1Command;
 import frc.robot.commands.Autonomous2Command;
 import frc.robot.commands.Autonomous3Command;
@@ -125,9 +126,20 @@ private final Accelerometer accelerometer = new BuiltInAccelerometer(Acceleromet
   DataLog log;
   StringLogEntry commandLogEntry;
   
+  Thread visionThread;
+  apriltagVisionThreadProc at;
+
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
 
   RobotContainer() {
+
+    /*
+     * Start AprilTag thread
+     */
+    at = new apriltagVisionThreadProc();
+    visionThread = new Thread(at, "AprilTag");
+    visionThread.setDaemon(true);
+    visionThread.start();
 
     if(useDataLog)
     {

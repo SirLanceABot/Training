@@ -44,9 +44,9 @@ class Robot extends TimedRobot {
     // autonomous chooser on the dashboard.
     robotContainer = new RobotContainer();
 
-    gatherCamera = new GatherCamera();
-    m_visionThread = new Thread(gatherCamera, "GatherCamera");
-    m_visionThread.setDaemon(true);
+    // gatherCamera = new GatherCamera();
+    // m_visionThread = new Thread(gatherCamera, "GatherCamera");
+    // m_visionThread.setDaemon(true);
     // m_visionThread.start();
   
     //FIXME: remove when gyro is used
