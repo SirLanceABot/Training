@@ -1,6 +1,10 @@
 package frc.robot;
 
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.lang.invoke.MethodHandles;
+import java.util.Optional;
+import java.util.Scanner;
 import java.util.concurrent.atomic.AtomicReference;
 
 import edu.wpi.first.wpilibj.DriverStation;
@@ -68,7 +72,21 @@ class Robot extends TimedRobot {
     // block in order for anything in the Command-based framework to work.
   @Override
   public void robotPeriodic() 
-  {
+  { 
+    // uptime output
+    // 940.4729565700001 940.47
+    // 940.4841530020001 940.48
+    // try {
+    //   System.out.println((System.nanoTime()*1.e-9) + " " + (new Scanner(new FileInputStream("/proc/uptime")).next()));
+    // } catch (FileNotFoundException e) {
+    //   e.printStackTrace();
+    // } 
+    // nanoTime appears to be roboRIO uptime - that's not generally applicable to different computers, though.
+    // uptime file could be a Linux standard
+    // nanoTime takes a long time to fetch the time
+    // fetching time from a file stream must be horrendously long (note that 2 resources aren't closed here, either, and it needs the try/catch)
+    // if you can use a differential time, then use the efficient System.currentTimeMillis()
+
     PeriodicIO.readInputs();         // 1st
     CommandScheduler.getInstance().run(); // 2nd
     PeriodicIO.writeOutputs();        // 3rd
@@ -93,13 +111,17 @@ class Robot extends TimedRobot {
   {
     // test auto that is similar but not identical to how the real robot code will work
     // get the auto choice
-    var autoChoice = robotContainer.getAutoChoice(); // what auto has been selected
-    if (autoChoice != autoChoicePrevious) // if it has changed then get the new command for the new selection
+    Optional<AutoChoice> autoChoice = robotContainer.getAutoChoice();
+    autoChoice.ifPresent( selection ->
     {
-      autonomousCommand = robotContainer.getAutonomousCommand(autoChoice);
-      DriverStation.reportWarning( "selected autonomous command " + autoChoice, false );
-      autoChoicePrevious = autoChoice; // reset the previous choice to the new choice    
+      if (selection != autoChoicePrevious)
+      { // if it has changed then get the new command for the new selection
+        autonomousCommand = robotContainer.getAutonomousCommand(selection);
+        DriverStation.reportWarning( "selected autonomous command " + selection, false );
+        autoChoicePrevious = selection; // reset the previous choice to the new choice
+      }
     }
+    );
   }
 
   /** This autonomous runs the autonomous command selected by your {@link RobotContainer} class. */

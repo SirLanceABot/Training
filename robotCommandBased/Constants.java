@@ -20,7 +20,7 @@ public final class Constants {
     public static class Drive
     {
         public static final double autoMinimalMoveTime = 3.;
-        public static final int testMotorPort = 3; // SparkMax CAN id
+        public static final int testMotorPort = 5;//3; // SparkMax CAN id
         public static final double VoltageCompensation = 10;
         public static final int configRetries = 5;
         public static final int statusFrame0Periodms = 10;

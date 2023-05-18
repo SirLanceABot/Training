@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.lang.invoke.MethodHandles;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Optional;
 import java.util.function.BooleanSupplier;
 
 import static edu.wpi.first.wpilibj2.command.Commands.run;
@@ -19,6 +20,8 @@ import edu.wpi.first.wpilibj.BuiltInAccelerometer;
 import edu.wpi.first.wpilibj.DataLogManager;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.PowerDistribution;
+import edu.wpi.first.wpilibj.RobotController;
+import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj.interfaces.Accelerometer;
 import edu.wpi.first.wpilibj.shuffleboard.EventImportance;
@@ -37,7 +40,7 @@ import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
 import edu.wpi.first.wpilibj2.command.Subsystem;
 import edu.wpi.first.wpilibj2.command.button.JoystickButton;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
-import frc.robot.Sensors.apriltagVisionThreadProc;
+import frc.robot.Sensors.ApriltagVisionThreadProc;
 import frc.robot.commands.Autonomous1Command;
 import frc.robot.commands.Autonomous2Command;
 import frc.robot.commands.Autonomous3Command;
@@ -60,27 +63,6 @@ class RobotContainer {
   static
   {
       System.out.println("Loading: " + MethodHandles.lookup().lookupClass().getCanonicalName());
-
-      //// start get roboRIO comment
-/*
-roboRIO dashboard reads:
-Programmers' Tub 1
-
-prints from here:
-The roboRIO comment is >PRETTY_HOSTNAME="Programmers' Tub 1"
-<
-*/
-      final Path commentPath = Path.of("/etc/machine-info");
-      try {  
-      // var temp = System.currentTimeMillis() + "," + (Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() + "\n");
-      // Files.writeString(memoryLog, temp, StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.APPEND);
-      var comment = Files.readString(commentPath);
-      System.out.println("The roboRIO comment is >" + comment + "<");
-      } catch (IOException e) {
-      // Couldn't read the file -- handle it how you want
-      System.out.println(e);
-      }
-      //// end get roboRIO comment
   }
 
 //_________________________________________________________________________________
@@ -100,8 +82,8 @@ The roboRIO comment is >PRETTY_HOSTNAME="Programmers' Tub 1"
 // activate or not selected subsystems
 
   private boolean useFullRobot       = false; // true implies all the rest are true; don't use "final" to prevent dead code messages
-  private boolean useDrive           = true;
-  private boolean useFlywheel        = true;
+  private boolean useDrive           = false;
+  private boolean useFlywheel        = false;
   private boolean useExample         = false;
   private boolean useFanFSM          = false;
 //_________________________________________________________________________________
@@ -121,25 +103,30 @@ private final Accelerometer accelerometer = new BuiltInAccelerometer(Acceleromet
 
   private final SendableChooser<AutoChoice> autoChooser;
 
-
   // WPILog
   DataLog log;
   StringLogEntry commandLogEntry;
   
   Thread visionThread;
-  apriltagVisionThreadProc at;
+  ApriltagVisionThreadProc at;
 
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
 
   RobotContainer() {
+    System.out.println("Robot Comment >>>" + RobotController.getComments() + "<<<");
 
     /*
      * Start AprilTag thread
      */
-    at = new apriltagVisionThreadProc();
-    visionThread = new Thread(at, "AprilTag");
-    visionThread.setDaemon(true);
-    visionThread.start();
+    boolean useAprilTag = true;
+    if(useAprilTag)
+     {
+      at = new ApriltagVisionThreadProc();
+      visionThread = new Thread(at, "AprilTag");
+      visionThread.setDaemon(true);
+      visionThread.start();
+    }
+    Timer.delay(1.);
 
     if(useDataLog)
     {
@@ -150,8 +137,6 @@ private final Accelerometer accelerometer = new BuiltInAccelerometer(Acceleromet
       var name = new String("/Commands/"); // make a prefix tree structure for the data
 
       commandLogEntry = new StringLogEntry(log, name+"events", "Event");
-
-      // DataLog log = new DataLog("/home/lvuser", "MyUStestLog"+System.currentTimeMillis()+".wpilog");
     }
 
     if(!useFullRobot) DriverStation.reportWarning("NOT USING FULL ROBOT", false);
@@ -163,7 +148,7 @@ private final Accelerometer accelerometer = new BuiltInAccelerometer(Acceleromet
     
     // autonomous component
     autoChooser       = (useFullRobot                ? new SendableChooser<AutoChoice>()       : null);
-  
+ 
     // clear faults, etc.
     resetRobot();
     
@@ -244,14 +229,14 @@ private final Accelerometer accelerometer = new BuiltInAccelerometer(Acceleromet
   }
 
   /**
-   * Get autonomous selection from user
-   * @return user selected autonomous choice
+   * Get optional autonomous selection from user
+   * @return user selected autonomous choice or an empty Optional
    */
-  AutoChoice getAutoChoice ()
+  Optional<AutoChoice> getAutoChoice ()
   {
     if(autoChooser != null)
-        return autoChooser.getSelected();
-    else return null;
+        return Optional.ofNullable(autoChooser.getSelected()); // if no default set, the value is null so expect that
+    else return Optional.empty();
   }
 
   /**
@@ -685,3 +670,26 @@ private final Accelerometer accelerometer = new BuiltInAccelerometer(Acceleromet
 // Consumer<Boolean> onEnd,
 // BooleanSupplier isFinished,
 // Subsystem... requirements)
+
+
+//// start get roboRIO comment
+// OBSOLETE METHOD
+/*
+// roboRIO dashboard reads:
+// Programmers' Tub 1
+
+// prints from here:
+// The roboRIO comment is >PRETTY_HOSTNAME="Programmers' Tub 1"
+// <
+// */
+//       final Path commentPath = Path.of("/etc/machine-info");
+//       try {  
+//       // var temp = System.currentTimeMillis() + "," + (Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() + "\n");
+//       // Files.writeString(memoryLog, temp, StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+//       var comment = Files.readString(commentPath);
+//       System.out.println("The roboRIO comment is >" + comment + "<");
+//       } catch (IOException e) {
+//       // Couldn't read the file -- handle it how you want
+//       System.out.println(e);
+//       }
+//// end get roboRIO comment
