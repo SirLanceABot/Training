@@ -1,3 +1,5 @@
+//FIXME need to correctly handle Optional with no value present - it does happen sometimes
+
 package frc.robot.Sensors;
 
 import java.io.IOException;
@@ -26,11 +28,9 @@ import edu.wpi.first.cameraserver.CameraServer;
 import edu.wpi.first.cscore.CvSink;
 import edu.wpi.first.cscore.CvSource;
 import edu.wpi.first.cscore.UsbCamera;
-import edu.wpi.first.math.ComputerVisionUtil;
-import edu.wpi.first.math.Nat;
+import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.Vector;
 import edu.wpi.first.math.geometry.CoordinateSystem;
-import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.geometry.Translation3d;
@@ -41,27 +41,6 @@ import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableInstance;
 
 public class ApriltagVisionThreadProc implements Runnable {
-    
-  {
-    // prints the name of the Operating System
-    System.out.println(System.getProperty("os.name"));
-    /* maps a library name into a platform-specific string representing
-       a native library */
-    String str = System.mapLibraryName("os.name");   
-    System.out.println(str);
-    // File lib = null;
-    // String os = System.getProperty("os.name");
-    // String bitness = System.getProperty("sun.arch.data.model");
-    // if (os.toUpperCase().contains("WINDOWS")) {
-    //     if (bitness.endsWith("64")) {
-    //         lib = new File("C:\\Users\\POWERUSER\\Downloads\\opencv\\build\\java\\x64\\"
-    //                 + System.mapLibraryName("opencv_java2413"));
-    //     } else {
-    //         lib = new File("libs//x86//" + System.mapLibraryName("opencv_java2413"));
-    //     }
-    // }
-    // System.load(lib.getAbsolutePath());
-  }
 
 public void run() {
     System.out.println("ApriltagVisionThreadProc");
@@ -70,29 +49,29 @@ public void run() {
     // look for tag16h5, don't correct any error bits
     detector.addFamily("tag16h5", 0);
 
-  // Tag positions
-  AprilTagFieldLayout aprilTagFieldLayout = null;
+    // Tag positions
+    AprilTagFieldLayout aprilTagFieldLayout = null;
 
-  try {
-    aprilTagFieldLayout = AprilTagFieldLayout.loadFromResource(AprilTagFields.k2023ChargedUp.m_resourceFile);
-  } catch (IOException e) {
-    e.printStackTrace();
-  }
+    try {
+        aprilTagFieldLayout = AprilTagFieldLayout.loadFromResource(AprilTagFields.k2023ChargedUp.m_resourceFile);
+    } catch (IOException e) {
+        e.printStackTrace();
+    }
 
-  System.out.println("Tags on file");
-	Spliterator<AprilTag> namesSpliterator = aprilTagFieldLayout.getTags().spliterator();  // Getting Spliterator
-	namesSpliterator.forEachRemaining(System.out::println);		// Traversing and printing elements
-  /*
-  Tags on file
-AprilTag(ID: 1, pose: Pose3d(Translation3d(X: 15.51, Y: 1.07, Z: 0.46), Rotation3d(Quaternion(0.0, 0.0, 0.0, 1.0))))
-AprilTag(ID: 2, pose: Pose3d(Translation3d(X: 15.51, Y: 2.75, Z: 0.46), Rotation3d(Quaternion(0.0, 0.0, 0.0, 1.0))))
-AprilTag(ID: 3, pose: Pose3d(Translation3d(X: 15.51, Y: 4.42, Z: 0.46), Rotation3d(Quaternion(0.0, 0.0, 0.0, 1.0))))
-AprilTag(ID: 4, pose: Pose3d(Translation3d(X: 16.18, Y: 6.75, Z: 0.70), Rotation3d(Quaternion(0.0, 0.0, 0.0, 1.0))))
-AprilTag(ID: 5, pose: Pose3d(Translation3d(X: 0.36, Y: 6.75, Z: 0.70), Rotation3d(Quaternion(1.0, 0.0, 0.0, 0.0))))
-AprilTag(ID: 6, pose: Pose3d(Translation3d(X: 1.03, Y: 4.42, Z: 0.46), Rotation3d(Quaternion(1.0, 0.0, 0.0, 0.0))))
-AprilTag(ID: 7, pose: Pose3d(Translation3d(X: 1.03, Y: 2.75, Z: 0.46), Rotation3d(Quaternion(1.0, 0.0, 0.0, 0.0))))
-AprilTag(ID: 8, pose: Pose3d(Translation3d(X: 1.03, Y: 1.07, Z: 0.46), Rotation3d(Quaternion(1.0, 0.0, 0.0, 0.0))))
- */
+    System.out.println("Tags on file");
+    Spliterator<AprilTag> namesSpliterator = aprilTagFieldLayout.getTags().spliterator();  // Getting Spliterator
+    namesSpliterator.forEachRemaining(System.out::println);		// Traversing and printing elements
+    /*
+    Tags on file
+    AprilTag(ID: 1, pose: Pose3d(Translation3d(X: 15.51, Y: 1.07, Z: 0.46), Rotation3d(Quaternion(0.0, 0.0, 0.0, 1.0))))
+    AprilTag(ID: 2, pose: Pose3d(Translation3d(X: 15.51, Y: 2.75, Z: 0.46), Rotation3d(Quaternion(0.0, 0.0, 0.0, 1.0))))
+    AprilTag(ID: 3, pose: Pose3d(Translation3d(X: 15.51, Y: 4.42, Z: 0.46), Rotation3d(Quaternion(0.0, 0.0, 0.0, 1.0))))
+    AprilTag(ID: 4, pose: Pose3d(Translation3d(X: 16.18, Y: 6.75, Z: 0.70), Rotation3d(Quaternion(0.0, 0.0, 0.0, 1.0))))
+    AprilTag(ID: 5, pose: Pose3d(Translation3d(X: 0.36, Y: 6.75, Z: 0.70), Rotation3d(Quaternion(1.0, 0.0, 0.0, 0.0))))
+    AprilTag(ID: 6, pose: Pose3d(Translation3d(X: 1.03, Y: 4.42, Z: 0.46), Rotation3d(Quaternion(1.0, 0.0, 0.0, 0.0))))
+    AprilTag(ID: 7, pose: Pose3d(Translation3d(X: 1.03, Y: 2.75, Z: 0.46), Rotation3d(Quaternion(1.0, 0.0, 0.0, 0.0))))
+    AprilTag(ID: 8, pose: Pose3d(Translation3d(X: 1.03, Y: 1.07, Z: 0.46), Rotation3d(Quaternion(1.0, 0.0, 0.0, 0.0))))
+  */
 
     // Set up Pose Estimator - parameters are for a Microsoft Lifecam HD-3000
     // fx camera horizontal focal length, in pixels
@@ -125,8 +104,6 @@ AprilTag(ID: 8, pose: Pose3d(Translation3d(X: 1.03, Y: 1.07, Z: 0.46), Rotation3
     var outlineColor = new Scalar(0, 255, 0);
     var crossColor = new Scalar(0, 0, 255);
 
-    var pillarColor = new Scalar(0, 255, 255);
-
     // We'll output to NT
     NetworkTable tagsTable = NetworkTableInstance.getDefault().getTable("apriltags");
     IntegerArrayPublisher pubTags = tagsTable.getIntegerArrayTopic("tags").publish();
@@ -135,95 +112,82 @@ AprilTag(ID: 8, pose: Pose3d(Translation3d(X: 1.03, Y: 1.07, Z: 0.46), Rotation3
     // lets the robot stop this thread when restarting robot code or
     // deploying.
     while (!Thread.interrupted()) {
-      // Tell the CvSink to grab a frame from the camera and put it
-      // in the source mat.  If there is an error notify the output.
-      if (cvSink.grabFrame(mat) == 0) {
-        // Send the output the error.
-        outputStream.notifyError(cvSink.getError());
-        // skip the rest of the current iteration
-        continue;
-      }
-
-      Imgproc.cvtColor(mat, grayMat, Imgproc.COLOR_RGB2GRAY);
-
-      AprilTagDetection[] detections = detector.detect(grayMat);
-
-      // have not seen any tags yet
-      tags.clear();
-
-      for (AprilTagDetection detection : detections) { // loop all detections of AprilTags
-        
-        if(detection.getId() != 1) // margin < 20 seems bad  > 140 are good maybe > 50?
-        {
-           System.out.println("bad id " + detection.getId() + " " + detection.getDecisionMargin() + " " + detection.getHamming());
-           break;
+        // Tell the CvSink to grab a frame from the camera and put it
+        // in the source mat.  If there is an error notify the output.
+        if (cvSink.grabFrame(mat) == 0) {
+          // Send the output the error.
+          outputStream.notifyError(cvSink.getError());
+          // skip the rest of the current iteration
+          continue;
         }
 
-        System.out.println("good id " + detection.getId() + " " + detection.getDecisionMargin() + " " + detection.getHamming());
+        Imgproc.cvtColor(mat, grayMat, Imgproc.COLOR_RGB2GRAY);
 
-        // remember we saw this tag
-        tags.add((long) detection.getId());
+        AprilTagDetection[] detections = detector.detect(grayMat);
 
-        { // draw lines around the tag
-        for (var i = 0; i <= 3; i++) {
-          var j = (i + 1) % 4;
-          var pt1 = new Point(detection.getCornerX(i), detection.getCornerY(i));
-          var pt2 = new Point(detection.getCornerX(j), detection.getCornerY(j));
-          Imgproc.line(mat, pt1, pt2, outlineColor, 2);
-        }
+        // have not seen any tags yet
+        tags.clear();
 
-        // mark the center of the tag
-        var cx = detection.getCenterX();
-        var cy = detection.getCenterY();
-        var ll = 10;
-        Imgproc.line(mat, new Point(cx - ll, cy), new Point(cx + ll, cy), crossColor, 2);
-        Imgproc.line(mat, new Point(cx, cy - ll), new Point(cx, cy + ll), crossColor, 2);
+        // loop all detections of AprilTags
+        for (AprilTagDetection detection : detections) {
+          
+            if(detection.getId() > 8) // margin < 20 seems bad  > 140 are good maybe > 50?
+            {
+              System.out.println("bad id " + detection.getId() + " " + detection.getDecisionMargin() + " " + detection.getHamming());
+              break;
+            }
 
-        // identify the tag
-        Imgproc.putText(
-            mat,
-            Integer.toString(detection.getId()),
-            new Point(cx + ll, cy),
-            Imgproc.FONT_HERSHEY_SIMPLEX,
-            1,
-            crossColor,
-            3);
-      } // end draw lines around the tag
+          System.out.println("good id " + detection.getId() + " " + detection.getDecisionMargin() + " " + detection.getHamming());
+
+          // remember we saw this tag
+          tags.add((long) detection.getId());
+
+          { // draw lines around the tag
+          for (var i = 0; i <= 3; i++) {
+              var j = (i + 1) % 4;
+              var pt1 = new Point(detection.getCornerX(i), detection.getCornerY(i));
+              var pt2 = new Point(detection.getCornerX(j), detection.getCornerY(j));
+              Imgproc.line(mat, pt1, pt2, outlineColor, 2);
+          }
+
+          // mark the center of the tag
+          var cx = detection.getCenterX();
+          var cy = detection.getCenterY();
+          var ll = 10;
+          Imgproc.line(mat, new Point(cx - ll, cy), new Point(cx + ll, cy), crossColor, 2);
+          Imgproc.line(mat, new Point(cx, cy - ll), new Point(cx, cy + ll), crossColor, 2);
+
+          // identify the tag
+          Imgproc.putText(
+              mat,
+              Integer.toString(detection.getId()),
+              new Point(cx + ll, cy),
+              Imgproc.FONT_HERSHEY_SIMPLEX,
+              1,
+              crossColor,
+              3);
+          } // end draw lines around the tag
 
         // determine pose
         Transform3d pose = estimator.estimate(detection); // camera to object (I hope, maybe object to camera?)
-        // System.out.println("camera to tag pose " + pose);
 
-        /* attempting to draw a 3-D box in front of the AprilTag */
+        /* draw a 3-D box in front of the AprilTag */
 
         Mat H = new Mat(3, 3, CvType.CV_32F);
         H.put(0, 0, detection.getHomography());
-        // System.out.println("H from AprilTag detector\n" + H.dump());
 
         // original, before distortion corner locations
         MatOfPoint2f obj = new MatOfPoint2f(new Point(-1.,1.), new Point(1., 1.), new Point(1., -1.), new Point(-1., -1.));
 
-      // distorted by perspective corner locations found by AprilTag detector
-      // reformating to use in OpenCV solvePnP to get the homography that works
-      MatOfPoint2f scene = new MatOfPoint2f(
-        new Point(detection.getCornerX(0), detection.getCornerY(0)),
-        new Point(detection.getCornerX(1), detection.getCornerY(1)),
-        new Point(detection.getCornerX(2), detection.getCornerY(2)),
-        new Point(detection.getCornerX(3), detection.getCornerY(3))
-        );
-
-    // Mat hg = Calib3d.findHomography(obj, scene); // verified the same as WPILib calc
-    // System.out.println("H from corner points (found by AprilTag detector)\n" + hg.dump());
-    /*
-    H from tag
-    [144.80396, 12.976685, 350.0528;
-    41.401249, 145.22011, 297.9584;
-    0.16224369, 0.012986111, 1]
-    H from points
-    [144.8039564583409, 12.97668437929864, 350.0528031907195;
-    41.40125080826242, 145.2201143644582, 297.9583956188442;
-    0.1622436868404965, 0.01298611046976967, 1]
-    */
+        // distorted by perspective corner locations found by AprilTag detector
+        // reformating to use in OpenCV solvePnP to get the homography that works
+        // to draw the 3-D box in front of the tag
+        MatOfPoint2f scene = new MatOfPoint2f(
+          new Point(detection.getCornerX(0), detection.getCornerY(0)),
+          new Point(detection.getCornerX(1), detection.getCornerY(1)),
+          new Point(detection.getCornerX(2), detection.getCornerY(2)),
+          new Point(detection.getCornerX(3), detection.getCornerY(3))
+          );
 
         // camera same as above but different format for OpenCV
         float[] cameraParm = {(float)cameraConfig[0],   0.f,              (float)cameraConfig[2],
@@ -231,7 +195,6 @@ AprilTag(ID: 8, pose: Pose3d(Translation3d(X: 1.03, Y: 1.07, Z: 0.46), Rotation3
                                0.f,                      0.f,                1.f};   
         Mat K = new Mat(3, 3, CvType.CV_32F); // camera matrix
         K.put(0, 0, cameraParm);
-        // System.out.println("K\n" + K.dump());
 
         MatOfDouble distCoeffs = new MatOfDouble(); // not using any camera distortions so it's empty
 
@@ -241,75 +204,42 @@ AprilTag(ID: 8, pose: Pose3d(Translation3d(X: 1.03, Y: 1.07, Z: 0.46), Rotation3
               new Point3(1., 1., 0.),
               new Point3(1., -1., 0.),
               new Point3(-1., -1., 0.));
-        // System.out.println("bottom\n" + bottom.dump());
-        
+       
         MatOfPoint3f top = new MatOfPoint3f(
           new Point3(-1.,1., -0.621),
               new Point3(1., 1., -0.621),
               new Point3(1., -1., -0.621),
               new Point3(-1., -1., -0.621));
-            // System.out.println("top\n" + top.dump());
 
         Mat R = new Mat();
         Mat T = new Mat();
         Calib3d.solvePnP(bottom, scene, K, distCoeffs, R, T);
 
-        // System.out.println("R\n" + R.dump());
-        // System.out.println("T\n" + T.dump());
-
         MatOfPoint2f imagePointsBottom = new MatOfPoint2f();
         Calib3d.projectPoints(bottom, R, T, K, distCoeffs, imagePointsBottom);
-        // System.out.println("bottom projected\n" + imagePointsBottom.dump());
 
         MatOfPoint2f imagePointsTop = new MatOfPoint2f();
-        //{
-        // decomposing the WPILib homography for rotations and translations yields bad results. For some reason
-        // the R and T aren't suitable as is for use to projectPoints. Some of the multiple solutions almost look
-        // right but are too long or far from the object. Lacking understanding of this problem, it easier to
-        // redo the homography and get the R and T again from SolvePnP instead of from the WPILib calc.
-        //  // get the rotations and translations from homography and camera because not allOpenCV methods use H, K
-        //  List<Mat> rotations = new ArrayList<Mat>();
-        //  List<Mat> translations = new ArrayList<Mat>();
-        //  List<Mat> normals = new ArrayList<Mat>();
-        //  Calib3d.decomposeHomographyMat(H, K, rotations, translations, normals);
-        //  // may be several poses in list from which to choose - showing getting "0"
-        //  // System.out.println("rotations " + rotations.size() + " " + rotations.get(0).dump());
-        //  // System.out.println("translations " + translations.size() + " " + translations.get(0).dump());
-        //  // System.out.println("normals " + normals.size() + " " + normals.get(0).dump());
-        // Calib3d.projectPoints(top,
-        //         rotations.get(0), translations.get(0), K, distCoeffs, imagePointsTop);
-        // // System.out.println("top projected version 1\n" + imagePoints.dump());
-        //}
 
         Calib3d.projectPoints(top, R, T, K, distCoeffs, imagePointsTop); // good from solvePnP
-        // System.out.println("top projected version 2\n" + imagePointsTop.dump());
-        
-        // gyrations to use polyline.
-        // Its input is any number of paths each with any number of points for line segments
-        // Here is plotting only one path with few points
-        // make the list of Points
-        // put that list of Points into a Mat for one Line
-        // put that Mat of one Line into a list of Mats
         
         ArrayList<Point> topCornerPoints = new ArrayList<Point>();
 
         // draw from bottom points to top points - pillars
         for(int i = 0; i < 4; i++)
         {
-          double x1, y1, x2, y2;
-          x1 = imagePointsBottom.get(i, 0)[0];
-          y1 = imagePointsBottom.get(i, 0)[1];
-          x2 = imagePointsTop.get(i, 0)[0];
-          y2 = imagePointsTop.get(i, 0)[1];
+            double x1, y1, x2, y2;
+            x1 = imagePointsBottom.get(i, 0)[0];
+            y1 = imagePointsBottom.get(i, 0)[1];
+            x2 = imagePointsTop.get(i, 0)[0];
+            y2 = imagePointsTop.get(i, 0)[1];
 
-          topCornerPoints.add(new Point(x2, y2));
+            topCornerPoints.add(new Point(x2, y2));
 
-          // System.out.format("%6.0f%6.0f%6.0f%6.0f\n",x1, y1, x2,y2);
-          Imgproc.line(mat,
-            new Point(x1, y1),
-            new Point(x2, y2),
-            crossColor,
-            2);
+            Imgproc.line(mat,
+                new Point(x1, y1),
+                new Point(x2, y2),
+                crossColor,
+                2);
         }
 
         MatOfPoint topCornersTemp = new MatOfPoint();
@@ -319,92 +249,99 @@ AprilTag(ID: 8, pose: Pose3d(Translation3d(X: 1.03, Y: 1.07, Z: 0.46), Rotation3
         topCorners.add(topCornersTemp);
        
         Imgproc.polylines(mat, topCorners, true, crossColor, 2);
+        /* end draw a 3-D box in front of the AprilTag */
 
-        // H homography
-        // K camera
-        // fx fy cx c_y 699.3778103158814, 677.7161226393544, 345.6059345433618, 207.12741326228522
-        // fx 0 cx
-        // 0 fy cy
-        // 0  0  1
-
-        // put pose into dashbaord
-        // pose.getX() same as pose.getTranslation().getX()
-        // Rotation3d rot = pose.getRotation();
-
-        // Pose3d robotPose = PhotonUtils.estimateFieldToRobotAprilTag(
-        //   target.getBestCameraToTarget(), 
-        //   aprilTagFieldLayout.getTagPose(target.getFiducialId()),
-        //   robotToCam);  
-
-        // tagsTable
-        //     .getEntry("pose_" + detection.getId())
-        //     .setDoubleArray(
-        //         new double[] {
-        //           pose.getTranslation().getX(), pose.getTranslation().getY(), pose.getTranslation().getZ()
-        //           ,
-        //           pose.getRotation().getX(), pose.getRotation().getY(), pose.getRotation().getZ()
-        //         });
-
-        // System.out.format("%,6f %,6f %,6f %,6f %,6f %,6f\n",
-        //             pose.getTranslation().getX(), pose.getTranslation().getY(), pose.getTranslation().getZ()
-        //             ,
-        //             pose.getRotation().getX(), pose.getRotation().getY(), pose.getRotation().getZ()
-        // );
-        
+        /* display camera to tag transform at the top of the image and put acircle in the center*/
         Imgproc.rectangle(mat, new Point(0., 0.), new Point(640., 52.), new Scalar(255., 255., 255.), -1);
 
         Imgproc.putText(mat,
-         String.format("pose (x, y, z meters) %,6.2f %,6.2f %,6.2f",
-          pose.getTranslation().getX(), pose.getTranslation().getY(), pose.getTranslation().getZ()),
-          new Point(0., 25.),
-          Imgproc.FONT_HERSHEY_SIMPLEX,0.6, new Scalar(200., 0., 255.));
+          String.format("pose (x, y, z meters) %,6.2f %,6.2f %,6.2f",
+            pose.getTranslation().getX(), pose.getTranslation().getY(), pose.getTranslation().getZ()),
+            new Point(0., 25.),
+            Imgproc.FONT_HERSHEY_SIMPLEX,0.6, new Scalar(200., 0., 255.));
 
         Imgproc.putText(mat,
-          String.format("angle (Tx, Ty, Tz rads) %,6.2f %,6.2f %,6.2f",
-            pose.getRotation().getX(), pose.getRotation().getY(), pose.getRotation().getZ()),
-          new Point(0., 50.),
-          Imgproc.FONT_HERSHEY_SIMPLEX, 0.6,new Scalar(200., 0., 255.)
+            String.format("angle (Tx, Ty, Tz rads) %,6.2f %,6.2f %,6.2f",
+              pose.getRotation().getX(), pose.getRotation().getY(), pose.getRotation().getZ()),
+            new Point(0., 50.),
+            Imgproc.FONT_HERSHEY_SIMPLEX, 0.6,new Scalar(200., 0., 255.)
           );
  
         Imgproc.circle(mat, new Point(320., 240.),15, new Scalar(255., 0., 0.));
         Imgproc.circle(mat, new Point(320., 240.),16, new Scalar(0., 255., 255.));
+        /* end display camera to tag transform at the top of the image and put acircle in the center*/
 
-        // System.out.println("detection\n" + detection);
-        // System.out.println("pose\n" + pose);
+        // Transforms to get the robot pose
 
-      var robotToCamera =
-            new Transform3d(
-              // new Translation3d(0.2, 0.0, 0.0), // camera in front of center of robot and at the bottom (low near ground)          
-              new Translation3d(0.2, 0.0, 0.5), // camera in front of center of robot and above ground          
-              new Rotation3d(0.0, 0.0, Units.degreesToRadians(0.0))); // camera in line with robot chassis
+        // Apriltag has known pose on the field
+        //    loaded above from file
+        // Detected tag's perspective seen by the camera is used to estimate the camera pose relative to the tag
+        //    calculated above
+        // Camera has a known pose relative to the robot chassis
+        //   hard coded below
+        // Combine this chain to find the robot pose in the field
+        //    computed below
 
-      // if(aprilTagFieldLayout.getTagPose(1).isPresent())
-      // {
-        var tagInField = aprilTagFieldLayout.getTagPose(1).get();
-      // }
+        /* Transforms, rotations, reflections that I do not understand.
+           I thought the coordinate system conversions were supposed to take care of all this.
+           I fear these patches are brittle and the scheme will blow up when tags are located
+           at other angles to the field (to be tested).
+           ->   .inverse    why is this needed in multiple places?
+           ->   -tagToCameraTvec.getZ()   patch to flip upside down on the field?
+           ->   Math.PI - tagInField.getRotation().getZ()    patch to fix robot pitch or orientation is reversed (can't tell which)?
+           ->   new Rotation3d(), CoordinateSystem.NWU(), CoordinateSystem.EDN()).plus(    why add desired pose to 0?
+         */
+        var // transform from camera to robot chassis center which is located on the ground
+        cameraToRobot = new Transform3d(
+                             new Translation3d(-0.2, 0.0, -0.8), // camera in front of center of robot and above ground          
+                               new Rotation3d(0.0, 0.0, Units.degreesToRadians(0.0))); // camera in line with robot chassis
 
-    // pose is camera to tag with its own co-ordinates that must be converted
-      var poseFieldCoordinates = new Transform3d(tvecToTranslation(pose), rvecToRotation(pose));
+        var // pose from WPILib
+        tagInField = aprilTagFieldLayout.getTagPose(detection.getId()).get();
 
-      Pose3d robotInField = ComputerVisionUtil.objectToRobotPose(
-        tagInField, // AprilTag Object in field
-        poseFieldCoordinates,
-        robotToCamera);
- 
+        var // tag to camera translation
+        tagToCameraTvec = CoordinateSystem.convert(pose.getTranslation()
+                                                              .rotateBy(pose.inverse().getRotation()),
+                                                  CoordinateSystem.EDN(),CoordinateSystem.NWU()); // up/down is upside down
+        tagToCameraTvec = new Translation3d(
+                            tagToCameraTvec.getX(),
+                            tagToCameraTvec.getY(),
+                           -tagToCameraTvec.getZ()); // flip up and down; likely okay if before convert - try it
+
+        var // tag to camera rotation
+        tagToCameraRvec = CoordinateSystem.convert(new Rotation3d(), CoordinateSystem.NWU(), CoordinateSystem.EDN())
+                                          .plus(CoordinateSystem.convert(pose.inverse().getRotation(),
+                                                                        CoordinateSystem.EDN(), CoordinateSystem.NWU()));
+        
+        var // tag to camera transform
+        tagToCamera = new Transform3d(tagToCameraTvec, tagToCameraRvec);
+
+        var // robot in field is the composite of 3 pieces
+        robotInField = tagInField // tag pose in field is known
+                      .transformBy(tagToCamera) // vision gives transform from tag to camera for camera pose in field
+                      .transformBy(cameraToRobot); // transform from camera to to robot is known for robot pose in field
+
+        // rotate robot to account for the rotation of the AprilTag wrt the field
+        // because the camera always points to the tag; Z axis is ground to ceiling
+        final Vector<N3> m_axis = VecBuilder.fill(0., 0., 1.);
+        robotInField = robotInField.transformBy(
+                                  new Transform3d(new Translation3d(),
+                                  new Rotation3d(m_axis, Math.PI - tagInField.getRotation().getZ())));
+        // end transforms to get the robot pose from this vision tag pose
+
+        // put out to NetworkTables the robot pose according to this tag
         tagsTable
-        .getEntry("pose_" + detection.getId())
-        .setDoubleArray(
-            new double[] {
-              robotInField.getTranslation().getX(), robotInField.getTranslation().getY(), robotInField.getTranslation().getZ(),
-              robotInField.getRotation().getQuaternion().getX(), robotInField.getRotation().getQuaternion().getY(),
-              robotInField.getRotation().getQuaternion().getZ(), robotInField.getRotation().getQuaternion().getW()
-            });
-
-        // System.out.println("robotInField " + robotInField);
+          .getEntry("pose_" + detection.getId())
+          .setDoubleArray(
+              new double[] {
+                robotInField.getTranslation().getX(), robotInField.getTranslation().getY(), robotInField.getTranslation().getZ(),
+                robotInField.getRotation().getQuaternion().getX(), robotInField.getRotation().getQuaternion().getY(),
+                robotInField.getRotation().getQuaternion().getZ(), robotInField.getRotation().getQuaternion().getW()
+              });
 
       } // end loop over all detected tags
 
-      // put list of tags onto dashboard
+      // put list of tags onto dashboard (NetworkTables)
       pubTags.set(tags.stream().mapToLong(Long::longValue).toArray());
 
       // Give the output stream a new image to display
@@ -413,68 +350,105 @@ AprilTag(ID: 8, pose: Pose3d(Translation3d(X: 1.03, Y: 1.07, Z: 0.46), Rotation3
     } // end while grab camera frame
 
     pubTags.close();
+
     detector.close();
   }
+}
+// stuff from PhotonVision or others
+
+// /* from PhotonVision
+//      * The AprilTag pose rotation outputs are X left, Y down, Z away from the tag
+//      * with the tag facing
+//      * the camera upright and the camera facing the target parallel to the floor.
+//      * But our OpenCV
+//      * solvePNP code would have X left, Y up, Z towards the camera with the target
+//      * facing the camera
+//      * and both parallel to the floor. So we apply a base rotation to the rotation
+//      * component of the
+//      * apriltag pose to make it consistent with the EDN system that OpenCV uses,
+//      * internally a 180
+//      * rotation about the X axis
+//      */
+
+//     /**
+//      * Returns a 3d rotation. The opencv rvec is a vector with three
+//      * elements representing the axis scaled by the angle in the EDN coordinate system. (angle = norm,
+//      * and axis = rvec / norm)
+//      *
+//      * @param rvecInput The rvec to create a Rotation3d from
+//      */
+//   public static Rotation3d rvecToRotation(Transform3d rvecInput) {
+//     Vector<N3> axis = new Vector<>(Nat.N3());
+//     axis.set(0, 0, rvecInput.getRotation().getX());
+//     axis.set(1, 0, rvecInput.getRotation().getY());
+//     axis.set(2, 0, rvecInput.getRotation().getZ());
+//     var rvecConverted = rotationEDNtoNWU(new Rotation3d(axis.div(axis.norm()), axis.norm()));
+//     System.out.println("rvec i " + rvecInput);
+//     System.out.println("rvec o " + rvecConverted);
+//     System.out.println(".");
+//     return rvecConverted;
+// }
   
-/* from PhotonVision - not sure I interpret it the same way - it's confusing
-     * The AprilTag pose rotation outputs are X left, Y down, Z away from the tag
-     * with the tag facing
-     * the camera upright and the camera facing the target parallel to the floor.
-     * But our OpenCV
-     * solvePNP code would have X left, Y up, Z towards the camera with the target
-     * facing the camera
-     * and both parallel to the floor. So we apply a base rotation to the rotation
-     * component of the
-     * apriltag pose to make it consistent with the EDN system that OpenCV uses,
-     * internally a 180
-     * rotation about the X axis
-     */
+//     /**
+//      * Convert a rotation from EDN to NWU. For example, if you have a rotation X,Y,Z {1, 0, 0} in EDN,
+//      * this would be XYZ {0, -1, 0} in NWU.
+//      */
+//     private static Rotation3d rotationEDNtoNWU(Rotation3d rot) {
+//       return CoordinateSystem.convert(
+//                       new Rotation3d(), CoordinateSystem.NWU(), CoordinateSystem.EDN())
+//               .plus(CoordinateSystem.convert(rot, CoordinateSystem.EDN(), CoordinateSystem.NWU()));
+//   }
 
-  /**
-     * Returns a new 3d translation. The opencv tvec is a vector with three
-     * elements representing {x, y, z} in the EDN coordinate system.
-     *
-     * @param tvecInput The tvec to create a Translation3d from
-     */
+/*
+https://github.com/4201VitruvianBots/ChargedUp2023AprilTags/blob/c9830543d2c972bcd088209a7bcfd3ba93068d7a/tests/testTagToCameraPose.py
 
-  public static Translation3d tvecToTranslation(Transform3d tvecInput) {
-    Translation3d tvecConverted = CoordinateSystem.convert(
-      new Translation3d(tvecInput.getX(), tvecInput.getY(), -tvecInput.getZ()), // camera always facing tag (Z); flip with unary minus to get them in same direction
-      CoordinateSystem.EDN(),
-            CoordinateSystem.NWU());
+import math
 
-    // System.out.println("tvec i " + tvecInput);
-    // System.out.println("tvec o " + tvecConverted);
-    // System.out.println(".");
-    return tvecConverted;
-}
+from wpimath import geometry
+from wpimath.geometry import CoordinateAxis, CoordinateSystem, Transform3d, Translation3d, Rotation3d, Quaternion, \
+    Pose3d
 
-    /**
-     * Returns a 3d rotation. The opencv rvec is a vector with three
-     * elements representing the axis scaled by the angle in the EDN coordinate system. (angle = norm,
-     * and axis = rvec / norm)
-     *
-     * @param rvecInput The rvec to create a Rotation3d from
-     */
-  public static Rotation3d rvecToRotation(Transform3d rvecInput) {
-    Vector<N3> axis = new Vector<>(Nat.N3());
-    axis.set(0, 0, rvecInput.getRotation().getX());
-    axis.set(1, 0, rvecInput.getRotation().getY());
-    axis.set(2, 0, rvecInput.getRotation().getZ());
-    var rvecConverted = rotationEDNtoNWU(new Rotation3d(axis.div(axis.norm()), axis.norm()));
-    // System.out.println("rvec i " + rvecInput);
-    // System.out.println("rvec o " + rvecConverted);
-    // System.out.println(".");
-    return rvecConverted;
-}
-  
-    /**
-     * Convert a rotation from EDN to NWU. For example, if you have a rotation X,Y,Z {1, 0, 0} in EDN,
-     * this would be XYZ {0, -1, 0} in NWU.
-     */
-    private static Rotation3d rotationEDNtoNWU(Rotation3d rot) {
-      return CoordinateSystem.convert(
-                      new Rotation3d(), CoordinateSystem.NWU(), CoordinateSystem.EDN())
-              .plus(CoordinateSystem.convert(rot, CoordinateSystem.EDN(), CoordinateSystem.NWU()));
-  }
-}
+from aprilTags.tag_dictionary import TAG_DICTIONARY
+
+
+tag_dictionary = TAG_DICTIONARY
+
+tagsToTest = [1, 2]
+detectionResult = [
+    Transform3d(Translation3d(-0.47, 0.04, 2.33), Rotation3d(math.radians(1.35), math.radians(22.20), math.radians(0.90))),
+    Transform3d(Translation3d(-2.03, 0.00, 2.90), Rotation3d(math.radians(0.48), math.radians(19.35), math.radians(0.84))),
+]
+
+
+# RobotPose = (12.192, 0, 45)
+robotToCamera = Transform3d(Translation3d(), Rotation3d(0, 0, 0))
+for tag in tagsToTest:
+    tagValues = tag_dictionary['tags'][tag - 1]['pose']
+    tagTranslation = tagValues['translation']
+    tagRotation = tagValues['rotation']['quaternion']
+    tagT3D = Translation3d(tagTranslation['x'], tagTranslation['y'], tagTranslation['z']) # position of the tag on the field
+    tagR3D = Rotation3d(Quaternion(tagRotation['W'], tagRotation['X'], tagRotation['Y'], tagRotation['Z'])) # rotation of the tag on the field
+    tagPose = Pose3d(tagT3D, tagR3D) # pose of the tag on the field
+
+    tagTransform = detectionResult[tag - 1] # camera to tag, I think
+    wpiTranslation = CoordinateSystem.convert(tagTransform.translation().rotateBy(tagTransform.inverse().rotation()),
+                                              CoordinateSystem.EDN(),
+                                              CoordinateSystem.NWU())
+    # wpiTranslation = wpiTranslation.rotateBy(tagTransform.rotation())
+    robotPose = tagPose.transformBy(Transform3d(wpiTranslation, Rotation3d())).transformBy(robotToCamera)
+
+    print("Tag Position - X: {:.02f}\tY: {:.02f}\tZ: {:.02f}\tR: {:.02f}".format(tagPose.x, tagPose.y, tagPose.z, tagPose.rotation().z_degrees))
+    print("Tag Translation: {}".format(wpiTranslation))
+    print("robotpose: ({:.02f}, {:.02f}, {:.02f})".format(robotPose.translation().x, robotPose.translation().y, robotPose.rotation().y_degrees))
+
+# tagTransform2 = Transform3d(Translation3d(-0.78, 0, 1.82), Rotation3d(math.radians(-180), math.radians(45), math.radians(0)))
+# wpiTranslation2 = CoordinateSystem.convert(tagTransform2.translation(),
+#                                           CoordinateSystem.EDN(),
+#                                           CoordinateSystem.NWU())
+#
+# robotPose2 = tagPose.transformBy(Transform3d(wpiTranslation2, tagTransform2.rotation())) \
+#                     .transformBy(robotToCamera)
+#
+# print("Tag Translation2: {}".format(wpiTranslation))
+# print("robotpose2: ({:.02f}, {:.02f}, {:.02f})".format(robotPose2.translation().x, robotPose2.translation().y, robotPose2.rotation().y_degrees))
+ */
