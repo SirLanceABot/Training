@@ -2,21 +2,10 @@
 
 package frc.robot.Sensors;
 
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.nio.file.DirectoryStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
-import java.util.Spliterator;
-import java.util.stream.Stream;
+import java.util.function.Consumer;
 
 import org.opencv.calib3d.Calib3d;
 import org.opencv.core.CvType;
@@ -30,48 +19,26 @@ import org.opencv.core.Point3;
 import org.opencv.core.Scalar;
 import org.opencv.imgproc.Imgproc;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-
 import edu.wpi.first.apriltag.AprilTag;
 import edu.wpi.first.apriltag.AprilTagDetection;
 import edu.wpi.first.apriltag.AprilTagDetector;
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
-import edu.wpi.first.apriltag.AprilTagFields;
 import edu.wpi.first.apriltag.AprilTagPoseEstimator;
 import edu.wpi.first.cameraserver.CameraServer;
 import edu.wpi.first.cscore.CvSink;
 import edu.wpi.first.cscore.CvSource;
 import edu.wpi.first.cscore.UsbCamera;
-import edu.wpi.first.math.VecBuilder;
-import edu.wpi.first.math.Vector;
 import edu.wpi.first.math.geometry.CoordinateSystem;
-import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.geometry.Translation3d;
-import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.networktables.IntegerArrayPublisher;
 import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableInstance;
+import edu.wpi.first.wpilibj.Filesystem;
 
 public class ApriltagVisionThreadProc implements Runnable {
-
-    /**
-   * Deserializes a field layout from a resource within a internal jar file.
-   *
-   * <p>Users should use {@link AprilTagFields#loadAprilTagLayoutField()} to load official layouts
-   * and {@link #AprilTagFieldLayout(String)} for custom layouts.
-   *
-   * @param resourcePath The absolute path of the resource
-   * @return The deserialized layout
-   * @throws IOException If the resource could not be loaded
-   */
-  public static AprilTagFieldLayout loadFromFile(String resourcePath) throws IOException {
-      InputStream stream = new FileInputStream(resourcePath);
-      InputStreamReader reader = new InputStreamReader(stream);
-      return new ObjectMapper().readerFor(AprilTagFieldLayout.class).readValue(reader);
-    }
  
 public void run() {
     System.out.println("ApriltagVisionThreadProc");
@@ -81,43 +48,40 @@ public void run() {
     detector.addFamily("tag16h5", 0);
 
     // Tag positions
-    AprilTagFieldLayout aprilTagFieldLayout = null;
+// tag rotation is CCW looking down on field from the ceiling.
+// rotating around Z, 0 degrees is parallel to Y and facing down field or +X. 30 degrees is still
+// facing down field +X and a little facing into the +Y across the field
+    AprilTagFieldLayout aprilTagFieldLayout;
+    try {
+      aprilTagFieldLayout = new AprilTagFieldLayout(Filesystem.getDeployDirectory() + "/2023-chargedup.json"); // my custom
+      // aprilTagFieldLayout = AprilTagFieldLayout.loadFromResource(AprilTagFields.k2023ChargedUp.m_resourceFile); // WPILib standard
+    } catch (IOException e) {
+      e.printStackTrace();
+      aprilTagFieldLayout = null;
+    }
 
-  //   try {
-  //     aprilTagFieldLayout = AprilTagFieldLayout.loadFromResource(AprilTagFields.k2023ChargedUp.m_resourceFile);
-  // } catch (IOException e) {
-  //     e.printStackTrace();
-  // }
-  
-  
-      try {
-      aprilTagFieldLayout = loadFromFile("/home/lvuser/deploy/2023-chargedup.json");
-      }
-      catch (IOException e) {
-        e.printStackTrace();
-      }
+    Consumer<AprilTag> printTag = (tag) ->
+      {
+        System.out.format("%s %6.1f, %6.1f, %6.1f [degrees]%n",
+              tag.toString(),
+              Units.radiansToDegrees(tag.pose.getRotation().getX()),
+              Units.radiansToDegrees(tag.pose.getRotation().getY()),
+              Units.radiansToDegrees(tag.pose.getRotation().getZ()));
+      };
 
-    for(int i = 1; i <= 8;i++)
-      System.out.println("Angles of Tag " + i + " " +
-        aprilTagFieldLayout.getTagPose(i).get().getRotation().getX() + ", " +
-        aprilTagFieldLayout.getTagPose(i).get().getRotation().getY() + ", " +
-        aprilTagFieldLayout.getTagPose(i).get().getRotation().getZ());
+    System.out.println("Tags on file");    
+    aprilTagFieldLayout.getTags().forEach(printTag);
 
-    System.out.println("Tags on file");
-    Spliterator<AprilTag> namesSpliterator = aprilTagFieldLayout.getTags().spliterator();  // Getting Spliterator
-    namesSpliterator.forEachRemaining(System.out::println);		// Traversing and printing elements
     /*
-    Tags on file
-
-
-    AprilTag(ID: 1, pose: Pose3d(Translation3d(X: 15.51, Y: 1.07, Z: 0.46), Rotation3d(Quaternion(0.0, 0.0, 0.0, 1.0))))
-    AprilTag(ID: 2, pose: Pose3d(Translation3d(X: 15.51, Y: 2.75, Z: 0.46), Rotation3d(Quaternion(0.0, 0.0, 0.0, 1.0))))
-    AprilTag(ID: 3, pose: Pose3d(Translation3d(X: 15.51, Y: 4.42, Z: 0.46), Rotation3d(Quaternion(0.0, 0.0, 0.0, 1.0))))
-    AprilTag(ID: 4, pose: Pose3d(Translation3d(X: 16.18, Y: 6.75, Z: 0.70), Rotation3d(Quaternion(0.0, 0.0, 0.0, 1.0))))
-    AprilTag(ID: 5, pose: Pose3d(Translation3d(X: 0.36, Y: 6.75, Z: 0.70), Rotation3d(Quaternion(1.0, 0.0, 0.0, 0.0))))
-    AprilTag(ID: 6, pose: Pose3d(Translation3d(X: 1.03, Y: 4.42, Z: 0.46), Rotation3d(Quaternion(1.0, 0.0, 0.0, 0.0))))
-    AprilTag(ID: 7, pose: Pose3d(Translation3d(X: 1.03, Y: 2.75, Z: 0.46), Rotation3d(Quaternion(1.0, 0.0, 0.0, 0.0))))
-    AprilTag(ID: 8, pose: Pose3d(Translation3d(X: 1.03, Y: 1.07, Z: 0.46), Rotation3d(Quaternion(1.0, 0.0, 0.0, 0.0))))
+Tags on file
+AprilTag(ID: 1, pose: Pose3d(Translation3d(X: 10.51, Y: 8.00, Z: 0.46), Rotation3d(Quaternion(0.9658855493432025, 0.0, 0.0, 0.2589693139543369)))) 0.0, 0.0, 30.0 [degrees]
+AprilTag(ID: 2, pose: Pose3d(Translation3d(X: 15.51, Y: 2.75, Z: 0.46), Rotation3d(Quaternion(0.0, 0.0, 0.0, 1.0)))) 0.0, 0.0, 180.0 [degrees]
+AprilTag(ID: 3, pose: Pose3d(Translation3d(X: 15.51, Y: 4.42, Z: 0.46), Rotation3d(Quaternion(0.0, 0.0, 0.0, 1.0)))) 0.0, 0.0, 180.0 [degrees]
+AprilTag(ID: 4, pose: Pose3d(Translation3d(X: 16.18, Y: 6.75, Z: 0.70), Rotation3d(Quaternion(0.0, 0.0, 0.0, 1.0)))) 0.0, 0.0, 180.0 [degrees]
+AprilTag(ID: 5, pose: Pose3d(Translation3d(X: 0.36, Y: 6.75, Z: 0.70), Rotation3d(Quaternion(1.0, 0.0, 0.0, 0.0)))) 0.0, 0.0, 0.0 [degrees]
+AprilTag(ID: 6, pose: Pose3d(Translation3d(X: 1.03, Y: 4.42, Z: 0.46), Rotation3d(Quaternion(1.0, 0.0, 0.0, 0.0)))) 0.0, 0.0, 0.0 [degrees]
+AprilTag(ID: 7, pose: Pose3d(Translation3d(X: 1.03, Y: 2.75, Z: 0.46), Rotation3d(Quaternion(1.0, 0.0, 0.0, 0.0)))) 0.0, 0.0, 0.0 [degrees]
+AprilTag(ID: 8, pose: Pose3d(Translation3d(X: 1.03, Y: 1.07, Z: 0.46), Rotation3d(Quaternion(1.0, 0.0, 0.0, 0.0)))) 0.0, 0.0, 0.0 [degrees]
   */
 
   List<AprilTag> modifiedTags = aprilTagFieldLayout.getTags(); // make my copy of the tags so I can change them
@@ -182,7 +146,7 @@ public void run() {
         // loop all detections of AprilTags
         for (AprilTagDetection detection : detections) {
           
-            if(detection.getId() > 8 || detection.getDecisionMargin() < 100.) // margin < 20 seems bad  > 140 are good maybe > 50 a limit?
+            if(detection.getId() > 8 || detection.getDecisionMargin() < 80.) // margin < 20 seems bad  > 140 are good maybe > 50 a limit?
             {
               System.out.println("bad id " + detection.getId() + " " + detection.getDecisionMargin() + " " + detection.getHamming());
               break;
@@ -338,11 +302,12 @@ public void run() {
            I fear these patches are brittle and the scheme will blow up when tags are located
            at other angles to the field (to be tested).
            ->   .inverse    why is this needed in multiple places?
-           ->   -tagToCameraTvec.getZ()   patch to flip upside down on the field?
-           ->   Math.PI - tagInField.getRotation().getZ()    patch to fix robot rotation off by the tag rotation
            ->   new Rotation3d(), CoordinateSystem.NWU(), CoordinateSystem.EDN()).plus(    why add desired pose to 0?
-           ->   new Rotation3d(Yaxis, Math.PI)  patch again for pitch
-         */
+           ->   -tagToCameraTvec.getZ()   why need flip upside down on the field?
+           ->   -tagToCameraRvec.getX()   why need reverse rotation?
+           ->   -tagToCameraRvec.getY()   why need reverse rotation?
+        */
+
         var // transform from camera to robot chassis center which is located on the ground
         cameraToRobot = new Transform3d(
                              new Translation3d(-0.2, 0.0, -0.8), // camera in front of center of robot and above ground          
@@ -357,14 +322,19 @@ public void run() {
                                                               .rotateBy(pose.inverse().getRotation()),
                                                   CoordinateSystem.EDN(),CoordinateSystem.NWU()); // up/down is upside down
         tagToCameraTvec = new Translation3d(
-                            tagToCameraTvec.getX(),
-                            tagToCameraTvec.getY(),
-                           -tagToCameraTvec.getZ()); // PATCH flip up and down; likely okay if before convert - try it
+                            tagToCameraTvec.getX(), // this one is okay
+                            tagToCameraTvec.getY(), // this one is okay
+                            -tagToCameraTvec.getZ()); // PATCH translation reversed
 
         var // tag to camera rotation
         tagToCameraRvec = CoordinateSystem.convert(new Rotation3d(), CoordinateSystem.NWU(), CoordinateSystem.EDN())
                                           .plus(CoordinateSystem.convert(pose.inverse().getRotation(),
                                                                         CoordinateSystem.EDN(), CoordinateSystem.NWU()));
+
+        tagToCameraRvec = new Rotation3d(
+                          -tagToCameraRvec.getX(), // PATCH rotation reversed             
+                          -tagToCameraRvec.getY(), // PATCH rotation reversed             
+                           tagToCameraRvec.getZ() ); // this one is okay
 
         var // tag to camera transform
         tagToCamera = new Transform3d(tagToCameraTvec, tagToCameraRvec);
@@ -374,33 +344,50 @@ public void run() {
                       .transformBy(tagToCamera) // vision gives transform from tag to camera for camera pose in field
                       .transformBy(cameraToRobot); // transform from camera to to robot is known for robot pose in field
 
-        // rotate robot to account for the rotation of the AprilTag wrt the field
-        // because the camera always points to the tag; Z axis is ground to ceiling
-        final Vector<N3> Xaxis = VecBuilder.fill(0., 0., 1.);
-        robotInField = robotInField.transformBy(
-                                  new Transform3d(new Translation3d(),
-                                  new Rotation3d(Xaxis, Math.PI - tagInField.getRotation().getZ())));
+        // display the robot pose to field
+        Imgproc.rectangle(mat, new Point(0., 53.), new Point(640., 104.), new Scalar(255., 255., 255.), -1);
 
-        // PATCH rotate robot 180 around Y axis
-        final Vector<N3> Yaxis = VecBuilder.fill(0., 1., 0.);
-        robotInField = robotInField.transformBy(
-                                  new Transform3d(new Translation3d(),
-                                  new Rotation3d(Yaxis, Math.PI)));
-        
+        Imgproc.putText(mat,
+          String.format("pose (x, y, z meters) %,6.2f %,6.2f %,6.2f",
+          robotInField.getX(), robotInField.getY(), robotInField.getZ()),
+            new Point(0., 75.),
+            Imgproc.FONT_HERSHEY_SIMPLEX,0.6, new Scalar(200., 0., 255.));
+
+        Imgproc.putText(mat,
+            String.format("angle (Tx, Ty, Tz rads) %,6.2f %,6.2f %,6.2f",
+            robotInField.getRotation().getX(), robotInField.getRotation().getY(), robotInField.getRotation().getZ()),
+            new Point(0., 100.),
+            Imgproc.FONT_HERSHEY_SIMPLEX, 0.6,new Scalar(200., 0., 255.)
+          );
+  
         // end transforms to get the robot pose from this vision tag pose
 
         // robotInField = new Pose3d(); // zeros for test data
 
         // put out to NetworkTables the robot pose according to this tag
         tagsTable
-          .getEntry("pose_" + detection.getId())
+          .getEntry("robotpose_" + detection.getId())
           .setDoubleArray(
               new double[] {
                 robotInField.getTranslation().getX(), robotInField.getTranslation().getY(), robotInField.getTranslation().getZ(),
-                robotInField.getRotation().getQuaternion().getX(), robotInField.getRotation().getQuaternion().getY(),
-                robotInField.getRotation().getQuaternion().getZ(), robotInField.getRotation().getQuaternion().getW()
+                robotInField.getRotation().getQuaternion().getW(), robotInField.getRotation().getQuaternion().getX(),
+                robotInField.getRotation().getQuaternion().getY(), robotInField.getRotation().getQuaternion().getZ()
               });
-
+        
+        // put out to NetworkTables the tag pose
+        tagsTable
+        .getEntry("tagpose_" + detection.getId())
+        .setDoubleArray(
+            new double[] {
+                aprilTagFieldLayout.getTagPose(detection.getId()).get().getTranslation().getX(),
+                aprilTagFieldLayout.getTagPose(detection.getId()).get().getTranslation().getY(),
+                aprilTagFieldLayout.getTagPose(detection.getId()).get().getTranslation().getZ(),
+                aprilTagFieldLayout.getTagPose(detection.getId()).get().getRotation().getQuaternion().getW(),
+                aprilTagFieldLayout.getTagPose(detection.getId()).get().getRotation().getQuaternion().getX(),
+                aprilTagFieldLayout.getTagPose(detection.getId()).get().getRotation().getQuaternion().getY(),
+                aprilTagFieldLayout.getTagPose(detection.getId()).get().getRotation().getQuaternion().getZ()
+            });
+    
       } // end loop over all detected tags
 
       // put list of tags onto dashboard (NetworkTables)
