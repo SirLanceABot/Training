@@ -4,7 +4,6 @@ package frc.robot.Sensors;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.function.Consumer;
 
 import org.opencv.calib3d.Calib3d;
@@ -37,6 +36,7 @@ import edu.wpi.first.networktables.IntegerArrayPublisher;
 import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.wpilibj.Filesystem;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 public class ApriltagVisionThreadProc implements Runnable {
  
@@ -60,7 +60,7 @@ public void run() {
       aprilTagFieldLayout = null;
     }
 
-    Consumer<AprilTag> printTag = (tag) ->
+    Consumer<AprilTag> printTag = tag ->
       {
         System.out.format("%s %6.1f, %6.1f, %6.1f [degrees]%n",
               tag.toString(),
@@ -84,20 +84,22 @@ AprilTag(ID: 7, pose: Pose3d(Translation3d(X: 1.03, Y: 2.75, Z: 0.46), Rotation3
 AprilTag(ID: 8, pose: Pose3d(Translation3d(X: 1.03, Y: 1.07, Z: 0.46), Rotation3d(Quaternion(1.0, 0.0, 0.0, 0.0)))) 0.0, 0.0, 0.0 [degrees]
   */
 
-  List<AprilTag> modifiedTags = aprilTagFieldLayout.getTags(); // make my copy of the tags so I can change them
-  
-  aprilTagFieldLayout = new AprilTagFieldLayout(modifiedTags, 16.54, 8.);
-
     // Set up Pose Estimator - parameters are for a Microsoft Lifecam HD-3000
     // fx camera horizontal focal length, in pixels
     // fy camera vertical focal length, in pixels
     // cx camera horizontal focal center, in pixels
     // cy camera vertical focal center, in pixels
-    double[] cameraConfig = {699.3778103158814, 677.7161226393544, 345.6059345433618, 207.12741326228522};
+    double cameraFx = 699.377810315881;
+    double cameraFy = 677.7161226393544;
+    double cameraCx = 345.6059345433618;
+    double cameraCy = 207.12741326228522;
+
+    double tagSize = 0.1524; // meters
+
     // (https://www.chiefdelphi.com/t/wpilib-apriltagdetector-sample-code/421411/21)
     var poseEstConfig =
-        new AprilTagPoseEstimator.Config( // tag and camera configuration
-            0.1524, 699.3778103158814, 677.7161226393544, 345.6059345433618, 207.12741326228522);
+        new AprilTagPoseEstimator.Config( tagSize, cameraFx, cameraFy, cameraCx, cameraCy);
+
     var estimator = new AprilTagPoseEstimator(poseEstConfig);
 
     // Get the UsbCamera from CameraServer
@@ -183,20 +185,20 @@ AprilTag(ID: 8, pose: Pose3d(Translation3d(X: 1.03, Y: 1.07, Z: 0.46), Rotation3
               3);
           } // end draw lines around the tag
 
-        // determine pose
-        Transform3d pose = estimator.estimate(detection); // camera to object (I hope, maybe object to camera?)
+        // determine pose transform from tag to camera
+        // but later will have coordinate system changed and flip some angles and distance
+        // for the final tag to camera transform that can be used.
+        Transform3d pose = estimator.estimate(detection);
 
-        /* draw a 3-D box in front of the AprilTag */
+        { /* draw a 3-D box in front of the AprilTag */
+        // Corner locations distorted by perspective found by AprilTag detector.
+        // Couldn't get homography from that WPILib estimator to work so redoing estimate in OpenCV.
+        // Reformating to use OpenCV solvePnP to get the homography that works
+        // to draw the 3-D box in front of the tag.
 
         Mat H = new Mat(3, 3, CvType.CV_32F);
         H.put(0, 0, detection.getHomography());
 
-        // original, before distortion corner locations
-        MatOfPoint2f obj = new MatOfPoint2f(new Point(-1.,1.), new Point(1., 1.), new Point(1., -1.), new Point(-1., -1.));
-
-        // distorted by perspective corner locations found by AprilTag detector
-        // reformating to use in OpenCV solvePnP to get the homography that works
-        // to draw the 3-D box in front of the tag
         MatOfPoint2f scene = new MatOfPoint2f(
           new Point(detection.getCornerX(0), detection.getCornerY(0)),
           new Point(detection.getCornerX(1), detection.getCornerY(1)),
@@ -205,8 +207,8 @@ AprilTag(ID: 8, pose: Pose3d(Translation3d(X: 1.03, Y: 1.07, Z: 0.46), Rotation3
           );
 
         // camera same as above but different format for OpenCV
-        float[] cameraParm = {(float)cameraConfig[0],   0.f,              (float)cameraConfig[2],
-                               0.f,               (float)cameraConfig[1], (float)cameraConfig[3],
+        float[] cameraParm = {(float)cameraFx,   0.f,              (float)cameraCx,
+                               0.f,               (float)cameraFy, (float)cameraCy,
                                0.f,                      0.f,                1.f};   
         Mat K = new Mat(3, 3, CvType.CV_32F); // camera matrix
         K.put(0, 0, cameraParm);
@@ -242,7 +244,10 @@ AprilTag(ID: 8, pose: Pose3d(Translation3d(X: 1.03, Y: 1.07, Z: 0.46), Rotation3
         // draw from bottom points to top points - pillars
         for(int i = 0; i < 4; i++)
         {
-            double x1, y1, x2, y2;
+            double x1;
+            double y1;
+            double x2;
+            double y2;
             x1 = imagePointsBottom.get(i, 0)[0];
             y1 = imagePointsBottom.get(i, 0)[1];
             x2 = imagePointsTop.get(i, 0)[0];
@@ -265,42 +270,26 @@ AprilTag(ID: 8, pose: Pose3d(Translation3d(X: 1.03, Y: 1.07, Z: 0.46), Rotation3
        
         Imgproc.polylines(mat, topCorners, true, crossColor, 2);
         /* end draw a 3-D box in front of the AprilTag */
+        }
 
-        /* display camera to tag transform at the top of the image and put acircle in the center*/
-        Imgproc.rectangle(mat, new Point(0., 0.), new Point(640., 52.), new Scalar(255., 255., 255.), -1);
-
-        Imgproc.putText(mat,
-          String.format("pose (x, y, z meters) %,6.2f %,6.2f %,6.2f",
-            pose.getTranslation().getX(), pose.getTranslation().getY(), pose.getTranslation().getZ()),
-            new Point(0., 25.),
-            Imgproc.FONT_HERSHEY_SIMPLEX,0.6, new Scalar(200., 0., 255.));
-
-        Imgproc.putText(mat,
-            String.format("angle (Tx, Ty, Tz rads) %,6.2f %,6.2f %,6.2f",
-              pose.getRotation().getX(), pose.getRotation().getY(), pose.getRotation().getZ()),
-            new Point(0., 50.),
-            Imgproc.FONT_HERSHEY_SIMPLEX, 0.6,new Scalar(200., 0., 255.)
-          );
- 
+        { /* put a circle in the center of the camera for aiming purposes */
         Imgproc.circle(mat, new Point(320., 240.),15, new Scalar(255., 0., 0.));
         Imgproc.circle(mat, new Point(320., 240.),16, new Scalar(0., 255., 255.));
-        /* end display camera to tag transform at the top of the image and put acircle in the center*/
+        }
 
-        // Transforms to get the robot pose
+        // Transforms to get the robot pose in the field
 
         // Apriltag has known pose on the field
         //    loaded above from file
         // Detected tag's perspective seen by the camera is used to estimate the camera pose relative to the tag
         //    calculated above
         // Camera has a known pose relative to the robot chassis
-        //   hard coded below
+        //    hard coded below
         // Combine this chain to find the robot pose in the field
         //    computed below
 
-        /* Transforms, rotations, reflections that I do not understand.
-           I thought the coordinate system conversions were supposed to take care of all this.
-           I fear these patches are brittle and the scheme will blow up when tags are located
-           at other angles to the field (to be tested).
+        /* Transforms, rotations, reflections that RKT doesn't understand but made the robot pose right.
+           The coordinate system conversions were supposed to take care of all this.
            ->   .inverse    why is this needed in multiple places?
            ->   new Rotation3d(), CoordinateSystem.NWU(), CoordinateSystem.EDN()).plus(    why add desired pose to 0?
            ->   -tagToCameraTvec.getZ()   why need flip upside down on the field?
@@ -313,7 +302,8 @@ AprilTag(ID: 8, pose: Pose3d(Translation3d(X: 1.03, Y: 1.07, Z: 0.46), Rotation3
                              new Translation3d(-0.2, 0.0, -0.8), // camera in front of center of robot and above ground          
                                new Rotation3d(0.0, 0.0, Units.degreesToRadians(0.0))); // camera in line with robot chassis
 
-        //FIXME getting no value present on next statement java.util.NoSuchElementException
+        //FIXME Fix all Optionals - getting no value present on next statement java.util.NoSuchElementException
+
         var // pose from WPILib
         tagInField = aprilTagFieldLayout.getTagPose(detection.getId()).get();
 
@@ -321,6 +311,7 @@ AprilTag(ID: 8, pose: Pose3d(Translation3d(X: 1.03, Y: 1.07, Z: 0.46), Rotation3
         tagToCameraTvec = CoordinateSystem.convert(pose.getTranslation()
                                                               .rotateBy(pose.inverse().getRotation()),
                                                   CoordinateSystem.EDN(),CoordinateSystem.NWU()); // up/down is upside down
+        
         tagToCameraTvec = new Translation3d(
                             tagToCameraTvec.getX(), // this one is okay
                             tagToCameraTvec.getY(), // this one is okay
@@ -334,7 +325,7 @@ AprilTag(ID: 8, pose: Pose3d(Translation3d(X: 1.03, Y: 1.07, Z: 0.46), Rotation3
         tagToCameraRvec = new Rotation3d(
                           -tagToCameraRvec.getX(), // PATCH rotation reversed             
                           -tagToCameraRvec.getY(), // PATCH rotation reversed             
-                           tagToCameraRvec.getZ() ); // this one is okay
+                           tagToCameraRvec.getZ()); // this one is okay
 
         var // tag to camera transform
         tagToCamera = new Transform3d(tagToCameraTvec, tagToCameraRvec);
@@ -344,27 +335,18 @@ AprilTag(ID: 8, pose: Pose3d(Translation3d(X: 1.03, Y: 1.07, Z: 0.46), Rotation3
                       .transformBy(tagToCamera) // vision gives transform from tag to camera for camera pose in field
                       .transformBy(cameraToRobot); // transform from camera to to robot is known for robot pose in field
 
-        // display the robot pose to field
-        Imgproc.rectangle(mat, new Point(0., 53.), new Point(640., 104.), new Scalar(255., 255., 255.), -1);
-
-        Imgproc.putText(mat,
-          String.format("pose (x, y, z meters) %,6.2f %,6.2f %,6.2f",
-          robotInField.getX(), robotInField.getY(), robotInField.getZ()),
-            new Point(0., 75.),
-            Imgproc.FONT_HERSHEY_SIMPLEX,0.6, new Scalar(200., 0., 255.));
-
-        Imgproc.putText(mat,
-            String.format("angle (Tx, Ty, Tz rads) %,6.2f %,6.2f %,6.2f",
-            robotInField.getRotation().getX(), robotInField.getRotation().getY(), robotInField.getRotation().getZ()),
-            new Point(0., 100.),
-            Imgproc.FONT_HERSHEY_SIMPLEX, 0.6,new Scalar(200., 0., 255.)
-          );
-  
         // end transforms to get the robot pose from this vision tag pose
 
         // robotInField = new Pose3d(); // zeros for test data
 
         // put out to NetworkTables the robot pose according to this tag
+        SmartDashboard.putNumber("robot Tx", robotInField.getX());
+        SmartDashboard.putNumber("robot Ty", robotInField.getY());
+        SmartDashboard.putNumber("robot Tz", robotInField.getZ());
+        SmartDashboard.putNumber("robot Rx", Units.radiansToDegrees(robotInField.getRotation().getX()));
+        SmartDashboard.putNumber("robot Ry", Units.radiansToDegrees(robotInField.getRotation().getY()));
+        SmartDashboard.putNumber("robot Rz", Units.radiansToDegrees(robotInField.getRotation().getZ()));
+
         tagsTable
           .getEntry("robotpose_" + detection.getId())
           .setDoubleArray(
@@ -374,7 +356,7 @@ AprilTag(ID: 8, pose: Pose3d(Translation3d(X: 1.03, Y: 1.07, Z: 0.46), Rotation3
                 robotInField.getRotation().getQuaternion().getY(), robotInField.getRotation().getQuaternion().getZ()
               });
         
-        // put out to NetworkTables the tag pose
+        // put out to NetworkTables this tag pose
         tagsTable
         .getEntry("tagpose_" + detection.getId())
         .setDoubleArray(
@@ -451,53 +433,9 @@ AprilTag(ID: 8, pose: Pose3d(Translation3d(X: 1.03, Y: 1.07, Z: 0.46), Rotation3
 /*
 https://github.com/4201VitruvianBots/ChargedUp2023AprilTags/blob/c9830543d2c972bcd088209a7bcfd3ba93068d7a/tests/testTagToCameraPose.py
 
-import math
-
-from wpimath import geometry
-from wpimath.geometry import CoordinateAxis, CoordinateSystem, Transform3d, Translation3d, Rotation3d, Quaternion, \
-    Pose3d
-
-from aprilTags.tag_dictionary import TAG_DICTIONARY
-
-
-tag_dictionary = TAG_DICTIONARY
-
-tagsToTest = [1, 2]
-detectionResult = [
-    Transform3d(Translation3d(-0.47, 0.04, 2.33), Rotation3d(math.radians(1.35), math.radians(22.20), math.radians(0.90))),
-    Transform3d(Translation3d(-2.03, 0.00, 2.90), Rotation3d(math.radians(0.48), math.radians(19.35), math.radians(0.84))),
-]
-
-
-# RobotPose = (12.192, 0, 45)
-robotToCamera = Transform3d(Translation3d(), Rotation3d(0, 0, 0))
-for tag in tagsToTest:
-    tagValues = tag_dictionary['tags'][tag - 1]['pose']
-    tagTranslation = tagValues['translation']
-    tagRotation = tagValues['rotation']['quaternion']
-    tagT3D = Translation3d(tagTranslation['x'], tagTranslation['y'], tagTranslation['z']) # position of the tag on the field
-    tagR3D = Rotation3d(Quaternion(tagRotation['W'], tagRotation['X'], tagRotation['Y'], tagRotation['Z'])) # rotation of the tag on the field
-    tagPose = Pose3d(tagT3D, tagR3D) # pose of the tag on the field
-
-    tagTransform = detectionResult[tag - 1] # camera to tag, I think
     wpiTranslation = CoordinateSystem.convert(tagTransform.translation().rotateBy(tagTransform.inverse().rotation()),
                                               CoordinateSystem.EDN(),
                                               CoordinateSystem.NWU())
     # wpiTranslation = wpiTranslation.rotateBy(tagTransform.rotation())
     robotPose = tagPose.transformBy(Transform3d(wpiTranslation, Rotation3d())).transformBy(robotToCamera)
-
-    print("Tag Position - X: {:.02f}\tY: {:.02f}\tZ: {:.02f}\tR: {:.02f}".format(tagPose.x, tagPose.y, tagPose.z, tagPose.rotation().z_degrees))
-    print("Tag Translation: {}".format(wpiTranslation))
-    print("robotpose: ({:.02f}, {:.02f}, {:.02f})".format(robotPose.translation().x, robotPose.translation().y, robotPose.rotation().y_degrees))
-
-# tagTransform2 = Transform3d(Translation3d(-0.78, 0, 1.82), Rotation3d(math.radians(-180), math.radians(45), math.radians(0)))
-# wpiTranslation2 = CoordinateSystem.convert(tagTransform2.translation(),
-#                                           CoordinateSystem.EDN(),
-#                                           CoordinateSystem.NWU())
-#
-# robotPose2 = tagPose.transformBy(Transform3d(wpiTranslation2, tagTransform2.rotation())) \
-#                     .transformBy(robotToCamera)
-#
-# print("Tag Translation2: {}".format(wpiTranslation))
-# print("robotpose2: ({:.02f}, {:.02f}, {:.02f})".format(robotPose2.translation().x, robotPose2.translation().y, robotPose2.rotation().y_degrees))
  */
