@@ -305,8 +305,8 @@ AprilTag(ID: 8, pose: Pose3d(Translation3d(X: 1.03, Y: 1.07, Z: 0.46), Rotation3
 
         var // transform from camera to robot chassis center which is located on the ground
         cameraToRobot = new Transform3d(
-                            //  new Translation3d(-0.2, 0.0, -0.8), // camera in front of center of robot and above ground          
-                             new Translation3d(0., 0., 0.), // camera at center of robot - good for testing other transforms          
+                             new Translation3d(-0.2, 0.0, -0.8), // camera in front of center of robot and above ground          
+                            //  new Translation3d(0., 0., 0.), // camera at center of robot - good for testing other transforms          
                              new Rotation3d(0.0, 0.0, Units.degreesToRadians(0.0))); // camera in line with robot chassis
 
         //FIXME Fix all Optionals - getting no value present on next statement java.util.NoSuchElementException
