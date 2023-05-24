@@ -22,6 +22,7 @@ import edu.wpi.first.apriltag.AprilTag;
 import edu.wpi.first.apriltag.AprilTagDetection;
 import edu.wpi.first.apriltag.AprilTagDetector;
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
+import edu.wpi.first.apriltag.AprilTagFields;
 import edu.wpi.first.apriltag.AprilTagPoseEstimator;
 import edu.wpi.first.cameraserver.CameraServer;
 import edu.wpi.first.cscore.CvSink;
@@ -39,7 +40,9 @@ import edu.wpi.first.wpilibj.Filesystem;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 public class ApriltagVisionThreadProc implements Runnable {
- 
+
+  boolean ChargedUpTagLayout = true; // false is use custom deploy of layout
+
 public void run() {
     System.out.println("ApriltagVisionThreadProc");
 
@@ -53,8 +56,11 @@ public void run() {
 // facing down field +X and a little facing into the +Y across the field
     AprilTagFieldLayout aprilTagFieldLayout;
     try {
-      aprilTagFieldLayout = new AprilTagFieldLayout(Filesystem.getDeployDirectory() + "/2023-chargedup.json"); // my custom
-      // aprilTagFieldLayout = AprilTagFieldLayout.loadFromResource(AprilTagFields.k2023ChargedUp.m_resourceFile); // WPILib standard
+      if(ChargedUpTagLayout)
+        aprilTagFieldLayout = AprilTagFieldLayout.loadFromResource(AprilTagFields.k2023ChargedUp.m_resourceFile); // WPILib standard
+      else
+        aprilTagFieldLayout = new AprilTagFieldLayout(Filesystem.getDeployDirectory() + "/2023-chargedup.json"); // my custom
+      
     } catch (IOException e) {
       e.printStackTrace();
       aprilTagFieldLayout = null;
@@ -299,8 +305,9 @@ AprilTag(ID: 8, pose: Pose3d(Translation3d(X: 1.03, Y: 1.07, Z: 0.46), Rotation3
 
         var // transform from camera to robot chassis center which is located on the ground
         cameraToRobot = new Transform3d(
-                             new Translation3d(-0.2, 0.0, -0.8), // camera in front of center of robot and above ground          
-                               new Rotation3d(0.0, 0.0, Units.degreesToRadians(0.0))); // camera in line with robot chassis
+                            //  new Translation3d(-0.2, 0.0, -0.8), // camera in front of center of robot and above ground          
+                             new Translation3d(0., 0., 0.), // camera at center of robot - good for testing other transforms          
+                             new Rotation3d(0.0, 0.0, Units.degreesToRadians(0.0))); // camera in line with robot chassis
 
         //FIXME Fix all Optionals - getting no value present on next statement java.util.NoSuchElementException
 
@@ -308,24 +315,28 @@ AprilTag(ID: 8, pose: Pose3d(Translation3d(X: 1.03, Y: 1.07, Z: 0.46), Rotation3
         tagInField = aprilTagFieldLayout.getTagPose(detection.getId()).get();
 
         var // tag to camera translation
-        tagToCameraTvec = CoordinateSystem.convert(pose.getTranslation()
-                                                              .rotateBy(pose.inverse().getRotation()),
-                                                  CoordinateSystem.EDN(),CoordinateSystem.NWU()); // up/down is upside down
+        // tagToCameraTvec = CoordinateSystem.convert(pose.getTranslation()
+        //                                                       .rotateBy(pose.inverse().getRotation()),
+        //                                           CoordinateSystem.EDN(),CoordinateSystem.NWU()); // up/down is upside down
         
-        tagToCameraTvec = new Translation3d(
-                            tagToCameraTvec.getX(), // this one is okay
-                            tagToCameraTvec.getY(), // this one is okay
-                            -tagToCameraTvec.getZ()); // PATCH translation reversed
+        // tagToCameraTvec = new Translation3d(
+        //                     tagToCameraTvec.getX(), // this one is okay
+        //                     tagToCameraTvec.getY(), // this one is okay
+        //                     -tagToCameraTvec.getZ()); // PATCH translation reversed
+
+        tagToCameraTvec = new Translation3d(pose.getZ(), -pose.getX(), pose.getY());
 
         var // tag to camera rotation
-        tagToCameraRvec = CoordinateSystem.convert(new Rotation3d(), CoordinateSystem.NWU(), CoordinateSystem.EDN())
-                                          .plus(CoordinateSystem.convert(pose.inverse().getRotation(),
-                                                                        CoordinateSystem.EDN(), CoordinateSystem.NWU()));
+        // tagToCameraRvec = CoordinateSystem.convert(new Rotation3d(), CoordinateSystem.NWU(), CoordinateSystem.EDN())
+        //                                   .plus(CoordinateSystem.convert(pose.inverse().getRotation(),
+        //                                                                 CoordinateSystem.EDN(), CoordinateSystem.NWU()));
 
-        tagToCameraRvec = new Rotation3d(
-                          -tagToCameraRvec.getX(), // PATCH rotation reversed             
-                          -tagToCameraRvec.getY(), // PATCH rotation reversed             
-                           tagToCameraRvec.getZ()); // this one is okay
+        // tagToCameraRvec = new Rotation3d(
+        //                   -tagToCameraRvec.getX(), // PATCH rotation reversed             
+        //                   -tagToCameraRvec.getY(), // PATCH rotation reversed             
+        //                    tagToCameraRvec.getZ()); // this one is okay
+
+        tagToCameraRvec = new Rotation3d(pose.getRotation().getZ(), -pose.getRotation().getX(), pose.getRotation().getY());
 
         var // tag to camera transform
         tagToCamera = new Transform3d(tagToCameraTvec, tagToCameraRvec);
@@ -339,13 +350,20 @@ AprilTag(ID: 8, pose: Pose3d(Translation3d(X: 1.03, Y: 1.07, Z: 0.46), Rotation3
 
         // robotInField = new Pose3d(); // zeros for test data
 
-        // put out to NetworkTables the robot pose according to this tag
-        SmartDashboard.putNumber("robot Tx", robotInField.getX());
-        SmartDashboard.putNumber("robot Ty", robotInField.getY());
-        SmartDashboard.putNumber("robot Tz", robotInField.getZ());
-        SmartDashboard.putNumber("robot Rx", Units.radiansToDegrees(robotInField.getRotation().getX()));
-        SmartDashboard.putNumber("robot Ry", Units.radiansToDegrees(robotInField.getRotation().getY()));
-        SmartDashboard.putNumber("robot Rz", Units.radiansToDegrees(robotInField.getRotation().getZ()));
+        // put out to SmartDashboard tag and if multiple tags they clash
+        SmartDashboard.putNumber("robot Tx" + detection.getId(), robotInField.getX());
+        SmartDashboard.putNumber("robot Ty" + detection.getId(), robotInField.getY());
+        SmartDashboard.putNumber("robot Tz" + detection.getId(), robotInField.getZ());
+        SmartDashboard.putNumber("robot Rx" + detection.getId(), Units.radiansToDegrees(robotInField.getRotation().getX()));
+        SmartDashboard.putNumber("robot Ry" + detection.getId(), Units.radiansToDegrees(robotInField.getRotation().getY()));
+        SmartDashboard.putNumber("robot Rz" + detection.getId(), Units.radiansToDegrees(robotInField.getRotation().getZ()));
+
+        SmartDashboard.putNumber("tag to camera Tx" + detection.getId(), pose.getX());
+        SmartDashboard.putNumber("tag to camera Ty" + detection.getId(), pose.getY());
+        SmartDashboard.putNumber("tag to camera Tz" + detection.getId(), pose.getZ());
+        SmartDashboard.putNumber("tag to camera Rx" + detection.getId(), Units.radiansToDegrees(pose.getRotation().getX()));
+        SmartDashboard.putNumber("tag to camera Ry" + detection.getId(), Units.radiansToDegrees(pose.getRotation().getY()));
+        SmartDashboard.putNumber("tag to camera Rz" + detection.getId(), Units.radiansToDegrees(pose.getRotation().getZ()));
 
         tagsTable
           .getEntry("robotpose_" + detection.getId())
@@ -438,4 +456,16 @@ https://github.com/4201VitruvianBots/ChargedUp2023AprilTags/blob/c9830543d2c972b
                                               CoordinateSystem.NWU())
     # wpiTranslation = wpiTranslation.rotateBy(tagTransform.rotation())
     robotPose = tagPose.transformBy(Transform3d(wpiTranslation, Rotation3d())).transformBy(robotToCamera)
+ */
+/*
+ from WPILib documentation Drive classes:
+ Axis Conventions
+The drive classes use the NWU axes convention (North-West-Up as external reference in the world frame).
+ The positive X axis points ahead, the positive Y axis points left, and the positive Z axis points up.
+  We use NWU here because the rest of the library, and math in general, use NWU axes convention.
+
+Joysticks follow NED (North-East-Down) convention, where the positive X axis points ahead, the
+ positive Y axis points right, and the positive Z axis points down. However, it’s important to note
+  that axes values are rotations around the respective axes, not translations. When viewed with each
+   axis pointing toward you, CCW is a positive value and CW is a negative value. Pushing forward on the joystick is a CW rotation around the Y axis, so you get a negative value. Pushing to the right is a CCW rotation around the X axis, so you get a positive value.
  */
