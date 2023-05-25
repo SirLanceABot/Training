@@ -315,28 +315,10 @@ AprilTag(ID: 8, pose: Pose3d(Translation3d(X: 1.03, Y: 1.07, Z: 0.46), Rotation3
         tagInField = aprilTagFieldLayout.getTagPose(detection.getId()).get();
 
         var // tag to camera translation
-        // tagToCameraTvec = CoordinateSystem.convert(pose.getTranslation()
-        //                                                       .rotateBy(pose.inverse().getRotation()),
-        //                                           CoordinateSystem.EDN(),CoordinateSystem.NWU()); // up/down is upside down
-        
-        // tagToCameraTvec = new Translation3d(
-        //                     tagToCameraTvec.getX(), // this one is okay
-        //                     tagToCameraTvec.getY(), // this one is okay
-        //                     -tagToCameraTvec.getZ()); // PATCH translation reversed
-
         tagToCameraTvec = new Translation3d(pose.getZ(), -pose.getX(), pose.getY());
 
         var // tag to camera rotation
-        // tagToCameraRvec = CoordinateSystem.convert(new Rotation3d(), CoordinateSystem.NWU(), CoordinateSystem.EDN())
-        //                                   .plus(CoordinateSystem.convert(pose.inverse().getRotation(),
-        //                                                                 CoordinateSystem.EDN(), CoordinateSystem.NWU()));
-
-        // tagToCameraRvec = new Rotation3d(
-        //                   -tagToCameraRvec.getX(), // PATCH rotation reversed             
-        //                   -tagToCameraRvec.getY(), // PATCH rotation reversed             
-        //                    tagToCameraRvec.getZ()); // this one is okay
-
-        tagToCameraRvec = new Rotation3d(pose.getRotation().getZ(), -pose.getRotation().getX(), pose.getRotation().getY());
+        tagToCameraRvec = new Rotation3d(-pose.getRotation().getZ(), pose.getRotation().getX(), Math.PI+pose.getRotation().getY());
 
         var // tag to camera transform
         tagToCamera = new Transform3d(tagToCameraTvec, tagToCameraRvec);
@@ -459,7 +441,7 @@ https://github.com/4201VitruvianBots/ChargedUp2023AprilTags/blob/c9830543d2c972b
  */
 /*
  from WPILib documentation Drive classes:
- Axis Conventions
+ Axis Conventions:
 The drive classes use the NWU axes convention (North-West-Up as external reference in the world frame).
  The positive X axis points ahead, the positive Y axis points left, and the positive Z axis points up.
   We use NWU here because the rest of the library, and math in general, use NWU axes convention.
