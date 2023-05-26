@@ -40,7 +40,7 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 public class ApriltagVisionThreadProc implements Runnable {
 
-  boolean ChargedUpTagLayout = true; // false is use custom deploy of layout
+  boolean ChargedUpTagLayout = false; // false is use custom deploy of layout
 
 public void run() {
     System.out.println("ApriltagVisionThreadProc");
@@ -297,9 +297,8 @@ AprilTag(ID: 8, pose: Pose3d(Translation3d(X: 1.03, Y: 1.07, Z: 0.46), Rotation3
            The coordinate system conversions were supposed to take care of all this.
            ->   .inverse    why is this needed in multiple places?
            ->   new Rotation3d(), CoordinateSystem.NWU(), CoordinateSystem.EDN()).plus(    why add desired pose to 0?
-           ->   -tagToCameraTvec.getZ()   why need flip upside down on the field?
-           ->   -tagToCameraRvec.getX()   why need reverse rotation?
-           ->   -tagToCameraRvec.getY()   why need reverse rotation?
+           ->   -tagToCameraTvec.getX()   why need flip upside down on the field?
+           ->   -tagToCameraRvec.getZ()   why need reverse rotation?
         */
 
         var // transform from camera to robot chassis center which is located on the ground
