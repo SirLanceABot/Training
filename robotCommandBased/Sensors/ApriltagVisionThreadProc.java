@@ -1,10 +1,10 @@
-//FIXME need to correctly handle Optional with no value present - it does happen sometimes
-
 package frc.robot.Sensors;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.function.Consumer;
+
+import javax.lang.model.util.ElementScanner14;
 
 import org.opencv.calib3d.Calib3d;
 import org.opencv.core.CvType;
@@ -28,6 +28,7 @@ import edu.wpi.first.cameraserver.CameraServer;
 import edu.wpi.first.cscore.CvSink;
 import edu.wpi.first.cscore.CvSource;
 import edu.wpi.first.cscore.UsbCamera;
+import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.geometry.Translation3d;
@@ -74,11 +75,11 @@ public void run() {
               Units.radiansToDegrees(tag.pose.getRotation().getZ()));
       };
 
-    System.out.println("Tags on file");    
+    System.out.println(aprilTagFieldLayout.getTags().size() + " Tags on file");    
     aprilTagFieldLayout.getTags().forEach(printTag);
 
     /*
-Tags on file
+8 Tags on file
 AprilTag(ID: 1, pose: Pose3d(Translation3d(X: 10.51, Y: 8.00, Z: 0.46), Rotation3d(Quaternion(0.9658855493432025, 0.0, 0.0, 0.2589693139543369)))) 0.0, 0.0, 30.0 [degrees]
 AprilTag(ID: 2, pose: Pose3d(Translation3d(X: 15.51, Y: 2.75, Z: 0.46), Rotation3d(Quaternion(0.0, 0.0, 0.0, 1.0)))) 0.0, 0.0, 180.0 [degrees]
 AprilTag(ID: 3, pose: Pose3d(Translation3d(X: 15.51, Y: 4.42, Z: 0.46), Rotation3d(Quaternion(0.0, 0.0, 0.0, 1.0)))) 0.0, 0.0, 180.0 [degrees]
@@ -152,13 +153,19 @@ AprilTag(ID: 8, pose: Pose3d(Translation3d(X: 1.03, Y: 1.07, Z: 0.46), Rotation3
 
         // loop all detections of AprilTags
         for (AprilTagDetection detection : detections) {
-          
-            if(detection.getId() > 8 || detection.getDecisionMargin() < 80.) // margin < 20 seems bad  > 140 are good maybe > 50 a limit?
+
+            Pose3d tagInField; // pose from WPILib or custom pose file
+
+            if(aprilTagFieldLayout.getTagPose(detection.getId()).isPresent() && detection.getDecisionMargin() > 50.) // margin < 20 seems bad  > 140 are good maybe > 50 a limit?
+            {
+              tagInField = aprilTagFieldLayout.getTagPose(detection.getId()).get();
+            }
+            else
             {
               System.out.println("bad id " + detection.getId() + " " + detection.getDecisionMargin() + " " + detection.getHamming());
-              break;
+              continue;
             }
-
+    
           System.out.println("good id " + detection.getId() + " " + detection.getDecisionMargin() + " " + detection.getHamming());
 
           // remember we saw this tag
@@ -307,11 +314,6 @@ AprilTag(ID: 8, pose: Pose3d(Translation3d(X: 1.03, Y: 1.07, Z: 0.46), Rotation3
                             //  new Translation3d(0., 0., 0.), // camera at center of robot - good for testing other transforms          
                              new Rotation3d(0.0, 0.0, Units.degreesToRadians(0.0))); // camera in line with robot chassis
 
-        //FIXME Fix all Optionals - getting no value present on next statement java.util.NoSuchElementException
-
-        var // pose from WPILib
-        tagInField = aprilTagFieldLayout.getTagPose(detection.getId()).get();
-
         var // tag to camera translation
         tagToCameraTvec = new Translation3d(pose.getZ(), -pose.getX(), pose.getY());
 
@@ -359,13 +361,13 @@ AprilTag(ID: 8, pose: Pose3d(Translation3d(X: 1.03, Y: 1.07, Z: 0.46), Rotation3
         .getEntry("tagpose_" + detection.getId())
         .setDoubleArray(
             new double[] {
-                aprilTagFieldLayout.getTagPose(detection.getId()).get().getTranslation().getX(),
-                aprilTagFieldLayout.getTagPose(detection.getId()).get().getTranslation().getY(),
-                aprilTagFieldLayout.getTagPose(detection.getId()).get().getTranslation().getZ(),
-                aprilTagFieldLayout.getTagPose(detection.getId()).get().getRotation().getQuaternion().getW(),
-                aprilTagFieldLayout.getTagPose(detection.getId()).get().getRotation().getQuaternion().getX(),
-                aprilTagFieldLayout.getTagPose(detection.getId()).get().getRotation().getQuaternion().getY(),
-                aprilTagFieldLayout.getTagPose(detection.getId()).get().getRotation().getQuaternion().getZ()
+              tagInField.getTranslation().getX(),
+              tagInField.getTranslation().getY(),
+              tagInField.getTranslation().getZ(),
+              tagInField.getRotation().getQuaternion().getW(),
+              tagInField.getRotation().getQuaternion().getX(),
+              tagInField.getRotation().getQuaternion().getY(),
+              tagInField.getRotation().getQuaternion().getZ()
             });
     
       } // end loop over all detected tags
