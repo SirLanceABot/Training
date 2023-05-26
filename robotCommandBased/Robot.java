@@ -57,9 +57,9 @@ class Robot extends TimedRobot {
     //FIXME: remove when gyro is used
     SmartDashboard.putNumber("test yaw", 180.); // for testing without a gyro
     
-    pvw = new PVW();
+    // pvw = new PVW();
 
-    ll = new LL();
+    // ll = new LL();
 
   }
 
