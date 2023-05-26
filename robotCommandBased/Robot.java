@@ -1,10 +1,7 @@
 package frc.robot;
 
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.lang.invoke.MethodHandles;
 import java.util.Optional;
-import java.util.Scanner;
 import java.util.concurrent.atomic.AtomicReference;
 
 import edu.wpi.first.wpilibj.DriverStation;
@@ -13,8 +10,9 @@ import edu.wpi.first.wpilibj.livewindow.LiveWindow;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
-
-import static frc.robot.RobotContainer.AutoChoice;
+import frc.robot.RobotContainer.AutoChoice;
+import frc.robot.Sensors.LL;
+import frc.robot.Sensors.PVW;
 
 // order of execution: previous_modeExit, modeInit, modePeriodic, robotPeriodic
 
@@ -31,6 +29,9 @@ class Robot extends TimedRobot {
   Thread m_visionThread;
   GatherCamera gatherCamera;
 
+  PVW pvw;
+  LL ll;
+  
   public static AtomicReference<Double> yawTS = new AtomicReference<Double>(180.);
 
   Robot()
@@ -55,6 +56,10 @@ class Robot extends TimedRobot {
   
     //FIXME: remove when gyro is used
     SmartDashboard.putNumber("test yaw", 180.); // for testing without a gyro
+    
+    pvw = new PVW();
+
+    ll = new LL();
 
   }
 
@@ -94,6 +99,10 @@ class Robot extends TimedRobot {
     //FIXME: replace below heading with gyro get yaw
     var heading = SmartDashboard.getNumber("test yaw", 0.); // testing without a gyro
     yawTS.set(heading);
+
+    // pvw.PVacquire();
+
+    // ll.LLacquire();
   }
 
   /** This function is called once each time the robot enters Disabled mode. */

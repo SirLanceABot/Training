@@ -118,14 +118,27 @@ private final Accelerometer accelerometer = new BuiltInAccelerometer(Acceleromet
     /*
      * Start AprilTag thread
      */
-    boolean useAprilTag = true;
-    if(useAprilTag)
+    boolean useWPILibAprilTag = true;
+    if(useWPILibAprilTag)
      {
       at = new ApriltagVisionThreadProc();
       visionThread = new Thread(at, "AprilTag");
       visionThread.setDaemon(true);
       visionThread.start();
     }
+
+    boolean usePhotonVisionAprilTag = true;
+    if(usePhotonVisionAprilTag)
+    {
+
+    }
+
+    boolean useLimeLightAprilTag = true;
+    if(useLimeLightAprilTag)
+    {
+      
+    }
+    
     Timer.delay(1.);
 
     if(useDataLog)
