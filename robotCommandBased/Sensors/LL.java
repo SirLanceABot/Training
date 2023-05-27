@@ -1,8 +1,4 @@
 package frc.robot.Sensors;
-import edu.wpi.first.wpilibj.TimedRobot;
-
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
-
 import java.util.Arrays;
 import java.util.stream.Collectors;
 
@@ -13,10 +9,13 @@ import edu.wpi.first.math.util.Units;
 import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableEntry;
 import edu.wpi.first.networktables.NetworkTableInstance;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 public class LL {
 
     NetworkTable tagsTable = NetworkTableInstance.getDefault().getTable("apriltagsLL");
+    SpikeFilter spikeFilter = new SpikeFilter(50., 1000., 1);
+    double poseLL5Prev = 0.;
 
   public void LLacquire() {
 
@@ -33,22 +32,26 @@ public class LL {
   NetworkTableEntry ty = table.getEntry("ty");
   NetworkTableEntry ta = table.getEntry("ta");
   NetworkTableEntry tv = table.getEntry("tv");
+  NetworkTableEntry ts = table.getEntry("ts");
 
   //read values periodically
   double x = tx.getDouble(990.0);
   double y = ty.getDouble(991.0);
   double area = ta.getDouble(992.0);
   double valid = tv.getDouble(993.);
+  double skew = ts.getDouble(994.);
+  // System.out.println("ts " + timeBoot);
 
   //post to smart dashboard periodically
   SmartDashboard.putNumber("LimelightX", x);
   SmartDashboard.putNumber("LimelightY", y);
   SmartDashboard.putNumber("LimelightArea", area);
   SmartDashboard.putNumber("LimelightValid", valid);
+  SmartDashboard.putNumber("LimelightSkew", skew);
 
-  System.out.print(System.currentTimeMillis());
+  // System.out.print(System.currentTimeMillis());
 
-  System.out.println( "result\n" + LimelightHelpers.getLatestResults("limelight").targetingResults.toString() );
+  // System.out.println( "result\n" + LimelightHelpers.getLatestResults("limelight").targetingResults.toString() );
 
   var
   tid = NetworkTableInstance
@@ -56,7 +59,7 @@ public class LL {
             .getTable("limelight")
             .getEntry("tid")
             .getDouble(987.);
-  System.out.println("tid " + tid);
+  // System.out.println("tid " + tid); // tid = -1.0 is no AprilTag seen
 
   var
   poseLL = NetworkTableInstance
@@ -64,7 +67,16 @@ public class LL {
             .getTable("limelight")
             .getEntry("botpose_wpiblue")
             .getDoubleArray(new double[]{11.,12.,13.,14.,15.,16.,17.});
-  System.out.println("botpose_wpiblue\n" + Arrays.toString(poseLL));
+  
+  if(poseLL[5] == poseLL5Prev)
+  {
+    return; 
+  }
+  System.out.println(poseLL[5]);
+  poseLL5Prev = poseLL[5];
+
+  // System.out.println("botpose_wpiblue\n" + Arrays.toString(poseLL));
+
   // botpose_wpiblue	Robot transform in field-space (blue driverstation WPILIB origin).
   // Translation (X,Y,Z) Rotation(Roll,Pitch,Yaw), total latency (cl+tl)
   var
@@ -74,6 +86,11 @@ public class LL {
                             Units.degreesToRadians(poseLL[3]),
                            Units.degreesToRadians(poseLL[4]),
                             Units.degreesToRadians(poseLL[5])) );
+
+
+  var
+  ZangleLLfiltered = spikeFilter.calculate(poseLL[5]); // filter Z angle
+  SmartDashboard.putNumber("LL Z angle deg ", ZangleLLfiltered); // need spike filter on this angle (maybe others - not checked)
 
   // put out to NetworkTables this tag's robot pose
   tagsTable
