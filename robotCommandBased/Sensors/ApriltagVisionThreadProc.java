@@ -277,13 +277,12 @@ AprilTag(ID: 8, pose: Pose3d(Translation3d(X: 1.03, Y: 1.07, Z: 0.46), Rotation3
         } // end draw lines around the tag
         
         { /* draw a 3-D box in front of the AprilTag */
-
           // Corner locations distorted by perspective found by AprilTag detector.
           // WPILib estimator's R and T from a reversal of the WPILib homography
-          // don't provide good numbers draw nice 3-D box
+          // don't provide good numbers draw nice 3-D box. There are up to 4 solutions
+          // and they aren't scaled or translated correctly
           // so redoing estimate with OpenCV solvePNP. The R and T are very similar
-          // but behave dramatically differently.
-
+          // but behave dramatically differently unless the correct one is selected and massaged.
 
           MatOfPoint2f scene = new MatOfPoint2f(
             new Point(detection.getCornerX(0), detection.getCornerY(0)),
@@ -315,56 +314,23 @@ AprilTag(ID: 8, pose: Pose3d(Translation3d(X: 1.03, Y: 1.07, Z: 0.46), Rotation3
                 new Point3(1.*tagSize/2., -1.*tagSize/2., -0.7*tagSize/2.),
                 new Point3(-1.*tagSize/2., -1.*tagSize/2., -0.7*tagSize/2.));
 
-//           List<Mat> R = new ArrayList<Mat>();
-//           List<Mat> T = new ArrayList<Mat>();
+          Mat R = new Mat();
+          Mat T = new Mat();
 
-//           double[] testgethomo = detection.getHomography();
-//           System.out.println(toStringDA(testgethomo));
-
-//           // detection.getHomographyMatrix();
-
-//           Mat testit = new Mat(3, 3, CvType.CV_32F);
-//           testit.put(0, 0, 1.,2.,3.,4.,5.,6.,7.,8.,9.); // row major input order
-//           System.out.println(testit.dump());
-// /*
-// [1, 2, 3;
-//   4, 5, 6;
-//   7, 8, 9]
-// */
-
-//           Mat H = new Mat(3, 3, CvType.CV_32F);
-//           H.put(0, 0, detection.getHomography());
-//           Calib3d.decomposeHomographyMat(H, K, R, T, normal);
-
-          Mat RfromSolvePnP = new Mat(); 
-          Mat TfromSolvePnP = new Mat(); 
           var
-          foundSolution = Calib3d.solvePnP(bottom, scene, K, distCoeffs, RfromSolvePnP, TfromSolvePnP, false, Calib3d.SOLVEPNP_IPPE_SQUARE); // similar to WPILib
+          foundSolution = Calib3d.solvePnP(bottom, scene, K, distCoeffs, R, T, false, Calib3d.SOLVEPNP_IPPE_SQUARE); // similar to WPILib
           if(!foundSolution)
           {
             System.out.println("no solvePnP solution");
             continue;
           }
-          // // System.out.println("R\n" + R.dump() + "\n" + R.toString());
-          // // System.out.println("T\n" + T.dump() + "\n" + T.toString());
-          // double[] Ro = new double[3];
-          // double[] To = new double[3];
-          // Mat R = new Mat(3, 1, CvType.CV_64FC1);
-          // Mat T = new Mat(3, 1, CvType.CV_64FC1);
-          // R.put(0, 0, pose.getRotation().getX(), pose.getRotation().getY(), pose.getRotation().getZ());
-          // T.put(0, 0, pose.getX(), pose.getY(), pose.getZ());
-          // R.get(0, 0, Ro);
-          // T.get(0, 0, To);
-          // var
-          // poseO = new Transform3d(new Translation3d(To[0],To[1],To[2]), new Rotation3d(Ro[0],Ro[1],Ro[2])); // easier to print
-          // PrintPose.print("tag to camera frame SolvePnP", detection.getId(), poseO);
 
           MatOfPoint2f imagePointsBottom = new MatOfPoint2f();
-          Calib3d.projectPoints(bottom, RfromSolvePnP, TfromSolvePnP, K, distCoeffs, imagePointsBottom);
+          Calib3d.projectPoints(bottom, R, T, K, distCoeffs, imagePointsBottom);
 
           MatOfPoint2f imagePointsTop = new MatOfPoint2f();
 
-          Calib3d.projectPoints(top, RfromSolvePnP, TfromSolvePnP, K, distCoeffs, imagePointsTop);
+          Calib3d.projectPoints(top, R, T, K, distCoeffs, imagePointsTop);
           
           ArrayList<Point> topCornerPoints = new ArrayList<Point>();
 
@@ -678,3 +644,89 @@ Cv2.Rodrigues(Rvec, rotMat);
 // // 0.0 0.0 0.0; -90.0 0.0 -90.0
 // //  */
 // // END demo of WPILib bug report
+
+
+//////////////////////////////////////
+          // List<Mat> RMatrixlist = new ArrayList<Mat>();
+          // List<Mat> Tvectorlist = new ArrayList<Mat>();
+
+//           double[] testgethomo = detection.getHomography();
+//           System.out.println(toStringDA(testgethomo));
+
+//           Mat testit = new Mat(3, 3, CvType.CV_32F);
+//           testit.put(0, 0, 1.,2.,3.,4.,5.,6.,7.,8.,9.); // row major input order
+//           System.out.println(testit.dump());
+// /*
+// [1, 2, 3;
+//   4, 5, 6;
+//   7, 8, 9]
+// */
+          // List<Mat> normal = new ArrayList<Mat>();
+          // Mat H = new Mat(3, 3, CvType.CV_64F);
+          // H.put(0, 0, detection.getHomography());
+          // Calib3d.decomposeHomographyMat(H, K, RMatrixlist, Tvectorlist, normal);
+          // System.out.println(Rlist);
+          // System.out.println(Tlist);
+          // System.out.println(normal);
+
+          // for(int i = 0; i < Rlist.size(); i++)
+          // {
+          //   System.out.println(
+          //     "\nR " + i + "\n" + Rlist.get(i).dump() +
+          //     "\nT " + i + "\n" + Tlist.get(i).dump() +
+          //     "\nnormal " + i + "\n" + normal.get(i).dump()
+          //   );
+          // }
+//[Mat [ 3*3*CV_64FC1, isCont=true, isSubmat=false, nativeObj=0x13b7e18, dataAddr=0x13b8080 ], Mat [ 3*3*CV_64FC1, isCont=true, isSubmat=false, nativeObj=0x13b7e58, dataAddr=0x13b8100 ], Mat [ 3*3*CV_64FC1, isCont=true, isSubmat=false, nativeObj=0x13b7e98, dataAddr=0x13b81c0 ], Mat [ 3*3*CV_64FC1, isCont=true, isSubmat=false, nativeObj=0x13b7ed8, dataAddr=0x13b8280 ]]
+//[Mat [ 3*1*CV_64FC1, isCont=true, isSubmat=false, nativeObj=0x13b8a78, dataAddr=0x13b8440 ], Mat [ 3*1*CV_64FC1, isCont=true, isSubmat=false, nativeObj=0x13b8ab8, dataAddr=0x13b8500 ], Mat [ 3*1*CV_64FC1, isCont=true, isSubmat=false, nativeObj=0x13b8af8, dataAddr=0x13b8580 ], Mat [ 3*1*CV_64FC1, isCont=true, isSubmat=false, nativeObj=0x13b8b38, dataAddr=0x13b8640 ]]
+//[Mat [ 3*1*CV_64FC1, isCont=true, isSubmat=false, nativeObj=0x13b8c20, dataAddr=0x13b87c0 ], Mat [ 3*1*CV_64FC1, isCont=true, isSubmat=false, nativeObj=0x13b8c60, dataAddr=0x13b8840 ], Mat [ 3*1*CV_64FC1, isCont=true, isSubmat=false, nativeObj=0x13b8ca0, dataAddr=0x13b8900 ], Mat [ 3*1*CV_64FC1, isCont=true, isSubmat=false, nativeObj=0x13b8ce0, dataAddr=0x13b8980 ]]
+
+          // Mat Rvector = new Mat(); 
+          // Mat Tvector = new Mat(); 
+
+          // System.out.println("R " + Rmatrix.dump());
+          // System.out.println("T " + T.dump());
+
+          // Mat rotMat = new Mat(3, 3, MatType.CV_64FC1);
+
+          // Mat Rvec = new Mat();
+          // Calib3d.Rodrigues(RMatrixlist.get(2), Rvec);
+
+
+
+          // Rvec.copyTo(R);
+          // Tvectorlist.get(2).copyTo(T);
+
+          // System.out.println("Rs " + R.dump());
+          // System.out.println("Ts " + T.dump());
+/*
+R [-0.3464558719874254;
+0.5089872964519015;
+-0.01670075000555101]
+
+T [0.01681757319956745;
+0.0002821889450013376;
+0.9202925224984505]
+
+Rs [0.04946394466164961, -0.4626563167101914, 0.8851567379771961;
+-0.4633244730066544, 0.7744848669026645, 0.4307013160553419;
+-0.8848071828884798, -0.4314189652145561, -0.1760509175255702]
+
+Ts [1.044554312871123;
+0.4409966185508314;
+0.3912485505023551]
+*/
+          // // System.out.println("R\n" + R.dump() + "\n" + R.toString());
+          // // System.out.println("T\n" + T.dump() + "\n" + T.toString());
+          // double[] Ro = new double[3];
+          // double[] To = new double[3];
+          // Mat R = new Mat(3, 1, CvType.CV_64FC1);
+          // Mat T = new Mat(3, 1, CvType.CV_64FC1);
+          // R.put(0, 0, pose.getRotation().getX(), pose.getRotation().getY(), pose.getRotation().getZ());
+          // T.put(0, 0, pose.getX(), pose.getY(), pose.getZ());
+          // R.get(0, 0, Ro);
+          // T.get(0, 0, To);
+          // var
+          // poseO = new Transform3d(new Translation3d(To[0],To[1],To[2]), new Rotation3d(Ro[0],Ro[1],Ro[2])); // easier to print
+          // PrintPose.print("tag to camera frame SolvePnP", detection.getId(), poseO);
+////////////////////////////////////////////////////////
