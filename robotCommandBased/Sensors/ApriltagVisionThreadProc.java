@@ -1,20 +1,13 @@
-/*      Apriltag has known pose on the field
-           loaded from file
-        Detected tag's perspective seen by the camera is used to estimate the camera pose relative to the tag
-           calculated
-        Camera has a known pose relative to the robot chassis
-           hard coded
-        Combine this chain to find the robot pose in the field
-           computed
+/*      Apriltag has known pose on the field loaded from file
+        Detected tag's perspective seen by the camera is used to calculate an estimate of the camera pose relative to the tag
+        Camera has a known pose relative to the robot chassis hard coded herein
+        Combine this chain to calculate the robot pose in the field
 */
 package frc.robot.Sensors;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 import java.util.function.Consumer;
-import java.util.stream.Collectors;
 
 import org.opencv.calib3d.Calib3d;
 import org.opencv.core.CvType;
@@ -183,35 +176,40 @@ AprilTag(ID: 8, pose: Pose3d(Translation3d(X: 1.03, Y: 1.07, Z: 0.46), Rotation3
           tags.add((long) detection.getId());
 
         // determine pose transform from camera to tag
-        // will have coordinate system changed for the final camera to tag then tag to camera transform that can be used.
         Transform3d tagInCameraFrame = estimator.estimate(detection);
         PrintPose.print("tag in camera frame EDN", detection.getId(), tagInCameraFrame);
 
+        // These transformations are required for the correct robot pose.
+        // They arise from the tag facing the camera thus Pi radians rotated or CCW/CW flipped from the
+        // mathematically described pose from the estimator that's what our eyes see. The true rotation
+        // has to be used to get the right robot pose. The estimator could have done this but it didn't.
+        tagInCameraFrame = new Transform3d(
+          new Translation3d(
+                          tagInCameraFrame.getX(),
+                          tagInCameraFrame.getY(),
+                          tagInCameraFrame.getZ()),
+            new Rotation3d(
+                        -tagInCameraFrame.getRotation().getX() - Math.PI,
+                       -tagInCameraFrame.getRotation().getY(),
+                         tagInCameraFrame.getRotation().getZ() - Math.PI));
+
         // Transforms to get the robot pose in the field
         // to match LimeLight Vision botpose_wpiblue network tables entries
-        // as they display in AdvantageScope 3D Field
+        // as they display in AdvantageScope 3D Field robotInFieldFrame
 
-        // OpenCV and WPILib estimator layout of axes is EDN and field WPILib is NWU; need x -> -y , y -> -z , z -> x
+        // OpenCV and WPILib estimator layout of axes is EDN and field WPILib is NWU; need x -> -y , y -> -z , z -> x and same for differential rotations
         //tagInCameraFrame = CoordinateSystem.convert(tagInCameraFrame, CoordinateSystem.EDN(), CoordinateSystem.NWU()); // WPILib convert is wrong for transforms (2023.4.3)
         tagInCameraFrame = CoordinateSystemDOTconvert(tagInCameraFrame, CoordinateSystem.EDN(), CoordinateSystem.NWU()); // corrected convert
         PrintPose.print("tag in camera frame NWU", detection.getId(), tagInCameraFrame);
-
-        var // transform to camera from robot chassis center which is located on the ground
-        cameraInRobotFrame = new Transform3d(       
-                             new Translation3d(0.2, 0., 0.8),// camera in front of center of robot and above ground
-                             new Rotation3d(0.0, Units.degreesToRadians(-30.), Units.degreesToRadians(0.0))); // camera in line with robot chassis
-                                                                                  // -30 camera points up; +30 points down -- backwards of LL
-        // mysterious patches are needed make it work; why 2 extra rotations and offsets?
-        tagInCameraFrame = new Transform3d(
-                              new Translation3d(
-                                              tagInCameraFrame.getX(),
-                                              tagInCameraFrame.getY(),
-                                              tagInCameraFrame.getZ()),
-                                new Rotation3d(
-                                            Math.PI-tagInCameraFrame.getRotation().getX(),
-                                           Math.PI+tagInCameraFrame.getRotation().getY(),
-                                            tagInCameraFrame.getRotation().getZ()));
         
+        var // transform to camera from robot chassis center at floor level
+        cameraInRobotFrame = new Transform3d(       
+        //                      new Translation3d(0., 0., 0.),// camera at center bottom of robot zeros for test data 
+        //                      new Rotation3d(0.0, Units.degreesToRadians(0.), Units.degreesToRadians(0.0))); // camera in line with robot chassis
+                        new Translation3d(0.2, 0., 0.8),// camera in front of center of robot and above ground
+                          new Rotation3d(0.0, Units.degreesToRadians(-30.), Units.degreesToRadians(0.0))); // camera in line with robot chassis
+                                                                                 // y = -30 camera points up; +30 points down; sign is correct but backwards of LL
+
         var // robot in field is the composite of 3 pieces
         robotInFieldFrame = ComputerVisionUtil.objectToRobotPose(tagInFieldFrame,  tagInCameraFrame,  cameraInRobotFrame);
         // end transforms to get the robot pose from this vision tag pose
@@ -279,8 +277,8 @@ AprilTag(ID: 8, pose: Pose3d(Translation3d(X: 1.03, Y: 1.07, Z: 0.46), Rotation3
         { /* draw a 3-D box in front of the AprilTag */
           // Corner locations distorted by perspective found by AprilTag detector.
           // WPILib estimator's R and T from a reversal of the WPILib homography
-          // don't provide good numbers draw nice 3-D box. There are up to 4 solutions
-          // and they aren't scaled or translated correctly
+          // don't provide good numbers to draw nice 3-D box. There are up to 4
+          // solutions and they aren't scaled or translated correctly
           // so redoing estimate with OpenCV solvePNP. The R and T are very similar
           // but behave dramatically differently unless the correct one is selected and massaged.
 
@@ -396,12 +394,12 @@ CoordinateSystem.convert(transform.getTranslation(), from, to),
   } // end method CoordinateSystemDOTconvert
 
   
-  String toStringDA(double[] array) {
-    return Arrays.stream(array)
-            .mapToObj(i -> String.format("%5.2f", i))
-           // .collect(Collectors.joining(", ", "[", "]"));
-            .collect(Collectors.joining("|", "|", "|"));
-  }
+  // String toStringDA(double[] array) {
+  //   return Arrays.stream(array)
+  //           .mapToObj(i -> String.format("%5.2f", i))
+  //          // .collect(Collectors.joining(", ", "[", "]"));
+  //           .collect(Collectors.joining("|", "|", "|"));
+  // }
   
 } // end class ApriltagVisionThreadProc
 
@@ -645,7 +643,6 @@ Cv2.Rodrigues(Rvec, rotMat);
 // //  */
 // // END demo of WPILib bug report
 
-
 //////////////////////////////////////
           // List<Mat> RMatrixlist = new ArrayList<Mat>();
           // List<Mat> Tvectorlist = new ArrayList<Mat>();
@@ -661,44 +658,44 @@ Cv2.Rodrigues(Rvec, rotMat);
 //   4, 5, 6;
 //   7, 8, 9]
 // */
-          // List<Mat> normal = new ArrayList<Mat>();
-          // Mat H = new Mat(3, 3, CvType.CV_64F);
-          // H.put(0, 0, detection.getHomography());
-          // Calib3d.decomposeHomographyMat(H, K, RMatrixlist, Tvectorlist, normal);
-          // System.out.println(Rlist);
-          // System.out.println(Tlist);
-          // System.out.println(normal);
+// List<Mat> normal = new ArrayList<Mat>();
+// Mat H = new Mat(3, 3, CvType.CV_64F);
+// H.put(0, 0, detection.getHomography());
+// Calib3d.decomposeHomographyMat(H, K, RMatrixlist, Tvectorlist, normal);
+// System.out.println(Rlist);
+// System.out.println(Tlist);
+// System.out.println(normal);
 
-          // for(int i = 0; i < Rlist.size(); i++)
-          // {
-          //   System.out.println(
-          //     "\nR " + i + "\n" + Rlist.get(i).dump() +
-          //     "\nT " + i + "\n" + Tlist.get(i).dump() +
-          //     "\nnormal " + i + "\n" + normal.get(i).dump()
-          //   );
-          // }
+// for(int i = 0; i < Rlist.size(); i++)
+// {
+//   System.out.println(
+//     "\nR " + i + "\n" + Rlist.get(i).dump() +
+//     "\nT " + i + "\n" + Tlist.get(i).dump() +
+//     "\nnormal " + i + "\n" + normal.get(i).dump()
+//   );
+// }
 //[Mat [ 3*3*CV_64FC1, isCont=true, isSubmat=false, nativeObj=0x13b7e18, dataAddr=0x13b8080 ], Mat [ 3*3*CV_64FC1, isCont=true, isSubmat=false, nativeObj=0x13b7e58, dataAddr=0x13b8100 ], Mat [ 3*3*CV_64FC1, isCont=true, isSubmat=false, nativeObj=0x13b7e98, dataAddr=0x13b81c0 ], Mat [ 3*3*CV_64FC1, isCont=true, isSubmat=false, nativeObj=0x13b7ed8, dataAddr=0x13b8280 ]]
 //[Mat [ 3*1*CV_64FC1, isCont=true, isSubmat=false, nativeObj=0x13b8a78, dataAddr=0x13b8440 ], Mat [ 3*1*CV_64FC1, isCont=true, isSubmat=false, nativeObj=0x13b8ab8, dataAddr=0x13b8500 ], Mat [ 3*1*CV_64FC1, isCont=true, isSubmat=false, nativeObj=0x13b8af8, dataAddr=0x13b8580 ], Mat [ 3*1*CV_64FC1, isCont=true, isSubmat=false, nativeObj=0x13b8b38, dataAddr=0x13b8640 ]]
 //[Mat [ 3*1*CV_64FC1, isCont=true, isSubmat=false, nativeObj=0x13b8c20, dataAddr=0x13b87c0 ], Mat [ 3*1*CV_64FC1, isCont=true, isSubmat=false, nativeObj=0x13b8c60, dataAddr=0x13b8840 ], Mat [ 3*1*CV_64FC1, isCont=true, isSubmat=false, nativeObj=0x13b8ca0, dataAddr=0x13b8900 ], Mat [ 3*1*CV_64FC1, isCont=true, isSubmat=false, nativeObj=0x13b8ce0, dataAddr=0x13b8980 ]]
 
-          // Mat Rvector = new Mat(); 
-          // Mat Tvector = new Mat(); 
+// Mat Rvector = new Mat(); 
+// Mat Tvector = new Mat(); 
 
-          // System.out.println("R " + Rmatrix.dump());
-          // System.out.println("T " + T.dump());
+// System.out.println("R " + Rmatrix.dump());
+// System.out.println("T " + T.dump());
 
-          // Mat rotMat = new Mat(3, 3, MatType.CV_64FC1);
+// Mat rotMat = new Mat(3, 3, MatType.CV_64FC1);
 
-          // Mat Rvec = new Mat();
-          // Calib3d.Rodrigues(RMatrixlist.get(2), Rvec);
+// Mat Rvec = new Mat();
+// Calib3d.Rodrigues(RMatrixlist.get(2), Rvec);
 
 
 
-          // Rvec.copyTo(R);
-          // Tvectorlist.get(2).copyTo(T);
+// Rvec.copyTo(R);
+// Tvectorlist.get(2).copyTo(T);
 
-          // System.out.println("Rs " + R.dump());
-          // System.out.println("Ts " + T.dump());
+// System.out.println("Rs " + R.dump());
+// System.out.println("Ts " + T.dump());
 /*
 R [-0.3464558719874254;
 0.5089872964519015;
@@ -716,17 +713,17 @@ Ts [1.044554312871123;
 0.4409966185508314;
 0.3912485505023551]
 */
-          // // System.out.println("R\n" + R.dump() + "\n" + R.toString());
-          // // System.out.println("T\n" + T.dump() + "\n" + T.toString());
-          // double[] Ro = new double[3];
-          // double[] To = new double[3];
-          // Mat R = new Mat(3, 1, CvType.CV_64FC1);
-          // Mat T = new Mat(3, 1, CvType.CV_64FC1);
-          // R.put(0, 0, pose.getRotation().getX(), pose.getRotation().getY(), pose.getRotation().getZ());
-          // T.put(0, 0, pose.getX(), pose.getY(), pose.getZ());
-          // R.get(0, 0, Ro);
-          // T.get(0, 0, To);
-          // var
-          // poseO = new Transform3d(new Translation3d(To[0],To[1],To[2]), new Rotation3d(Ro[0],Ro[1],Ro[2])); // easier to print
-          // PrintPose.print("tag to camera frame SolvePnP", detection.getId(), poseO);
+// // System.out.println("R\n" + R.dump() + "\n" + R.toString());
+// // System.out.println("T\n" + T.dump() + "\n" + T.toString());
+// double[] Ro = new double[3];
+// double[] To = new double[3];
+// Mat R = new Mat(3, 1, CvType.CV_64FC1);
+// Mat T = new Mat(3, 1, CvType.CV_64FC1);
+// R.put(0, 0, pose.getRotation().getX(), pose.getRotation().getY(), pose.getRotation().getZ());
+// T.put(0, 0, pose.getX(), pose.getY(), pose.getZ());
+// R.get(0, 0, Ro);
+// T.get(0, 0, To);
+// var
+// poseO = new Transform3d(new Translation3d(To[0],To[1],To[2]), new Rotation3d(Ro[0],Ro[1],Ro[2])); // easier to print
+// PrintPose.print("tag to camera frame SolvePnP", detection.getId(), poseO);
 ////////////////////////////////////////////////////////
