@@ -45,6 +45,8 @@ import edu.wpi.first.wpilibj.Filesystem;
 
 public class ApriltagVisionThreadProc implements Runnable {
 
+  double scaleResolution = 0.5; // factor from 640 x 480 good to about 12 feet
+
   boolean ChargedUpTagLayout = true; // false is use custom deploy of layout
 
   public void run() {
@@ -94,15 +96,20 @@ AprilTag(ID: 7, pose: Pose3d(Translation3d(X: 1.03, Y: 2.75, Z: 0.46), Rotation3
 AprilTag(ID: 8, pose: Pose3d(Translation3d(X: 1.03, Y: 1.07, Z: 0.46), Rotation3d(Quaternion(1.0, 0.0, 0.0, 0.0)))) 0.0, 0.0, 0.0 [degrees]
   */
 
+  double scaleResolutionWX = 0.5; // basis of camera width resolution is 640 so scaling to 320
+  double scaleResolutionHY = 0.5; // basis of camera height resolution is 480 so scaling to 240
     // Set up Pose Estimator - parameters are for a Microsoft Lifecam HD-3000
     // fx camera horizontal focal length, in pixels
     // fy camera vertical focal length, in pixels
     // cx camera horizontal focal center, in pixels
     // cy camera vertical focal center, in pixels
-    double cameraFx = 699.377810315881;
-    double cameraFy = 677.7161226393544;
-    double cameraCx = 345.6059345433618;
-    double cameraCy = 207.12741326228522;
+    double cameraFx = 699.377810315881*scaleResolutionWX; // no scaling at 640
+    double cameraFy = 677.7161226393544*scaleResolutionHY; // no scaling  at 480
+    double cameraCx = 345.6059345433618*scaleResolutionWX; // no scaling  at 640
+    double cameraCy = 207.12741326228522*scaleResolutionHY; // no scaling  at 480
+
+    int cameraW = (int)(640*scaleResolutionWX); // no scaling at 640
+    int cameraH = (int)(480*scaleResolutionHY); // no scaling  at 480
 
     double tagSize = 0.1524; // meters
 
@@ -115,12 +122,12 @@ AprilTag(ID: 8, pose: Pose3d(Translation3d(X: 1.03, Y: 1.07, Z: 0.46), Rotation3
     // Get the UsbCamera from CameraServer
     UsbCamera camera = CameraServer.startAutomaticCapture(); // http://10.42.37.2:1181/   http://roborio-4237-frc.local:1181/?action=stream
     // Set the resolution
-    camera.setResolution(640, 480);
+    camera.setResolution((int)((double)640*scaleResolution), (int)((double)480*scaleResolution));
 
     // Get a CvSink. This will capture Mats from the camera
     CvSink cvSink = CameraServer.getVideo();
     // Setup a CvSource. This will send images back to the Dashboard
-    CvSource outputStream = CameraServer.putVideo("Detected", 640, 480); // http://10.42.37.2:1182/  http://roborio-4237-frc.local:1182/?action=stream
+    CvSource outputStream = CameraServer.putVideo("Detected", (int)((double)640*scaleResolution), (int)((double)480*scaleResolution)); // http://10.42.37.2:1182/  http://roborio-4237-frc.local:1182/?action=stream
 
     // Mats are very memory expensive. Lets reuse these.
     var mat = new Mat();
@@ -206,10 +213,10 @@ AprilTag(ID: 8, pose: Pose3d(Translation3d(X: 1.03, Y: 1.07, Z: 0.46), Rotation3
    
         var // transform to camera from robot chassis center at floor level
         cameraInRobotFrame = new Transform3d(       
-                             new Translation3d(0., 0., 0.),// camera at center bottom of robot zeros for test data 
-                             new Rotation3d(0.0, Units.degreesToRadians(0.), Units.degreesToRadians(0.0))); // camera in line with robot chassis
-                        // new Translation3d(0.2, 0., 0.8),// camera in front of center of robot and above ground
-                        //   new Rotation3d(0.0, Units.degreesToRadians(-30.), Units.degreesToRadians(0.0))); // camera in line with robot chassis
+                            //  new Translation3d(0., 0., 0.),// camera at center bottom of robot zeros for test data 
+                            //  new Rotation3d(0.0, Units.degreesToRadians(0.), Units.degreesToRadians(0.0))); // camera in line with robot chassis
+                        new Translation3d(0.2, 0., 0.8),// camera in front of center of robot and above ground
+                          new Rotation3d(0.0, Units.degreesToRadians(-30.), Units.degreesToRadians(0.0))); // camera in line with robot chassis
                                                                                  // y = -30 camera points up; +30 points down; sign is correct but backwards of LL
 
         var // robot in field is the composite of 3 pieces
@@ -354,8 +361,8 @@ AprilTag(ID: 8, pose: Pose3d(Translation3d(X: 1.03, Y: 1.07, Z: 0.46), Rotation3
 
       { /* put a circle in the center of the camera image for aiming purposes */
         // bad code assumes a camera W x H
-        Imgproc.circle(mat, new Point(320., 240.),15, new Scalar(255., 0., 0.));
-        Imgproc.circle(mat, new Point(320., 240.),16, new Scalar(0., 255., 255.));
+        Imgproc.circle(mat, new Point(((double)640*scaleResolution/2.), ((double)480*scaleResolution/2.)),15, new Scalar(255., 0., 0.));
+        Imgproc.circle(mat, new Point(((double)640*scaleResolution/2.), ((double)480*scaleResolution/2.)),16, new Scalar(0., 255., 255.));
       }
 
       // put list of tags onto dashboard (NetworkTables)
