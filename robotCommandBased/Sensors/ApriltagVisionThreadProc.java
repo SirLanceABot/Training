@@ -45,8 +45,6 @@ import edu.wpi.first.wpilibj.Filesystem;
 
 public class ApriltagVisionThreadProc implements Runnable {
 
-  double scaleResolution = 0.5; // factor from 640 x 480 good to about 12 feet
-
   boolean ChargedUpTagLayout = true; // false is use custom deploy of layout
 
   public void run() {
@@ -122,12 +120,12 @@ AprilTag(ID: 8, pose: Pose3d(Translation3d(X: 1.03, Y: 1.07, Z: 0.46), Rotation3
     // Get the UsbCamera from CameraServer
     UsbCamera camera = CameraServer.startAutomaticCapture(); // http://10.42.37.2:1181/   http://roborio-4237-frc.local:1181/?action=stream
     // Set the resolution
-    camera.setResolution((int)((double)640*scaleResolution), (int)((double)480*scaleResolution));
+    camera.setResolution((int)((double)640*scaleResolutionWX), (int)((double)480*scaleResolutionHY));
 
     // Get a CvSink. This will capture Mats from the camera
     CvSink cvSink = CameraServer.getVideo();
     // Setup a CvSource. This will send images back to the Dashboard
-    CvSource outputStream = CameraServer.putVideo("Detected", (int)((double)640*scaleResolution), (int)((double)480*scaleResolution)); // http://10.42.37.2:1182/  http://roborio-4237-frc.local:1182/?action=stream
+    CvSource outputStream = CameraServer.putVideo("Detected", (int)((double)640*scaleResolutionWX), (int)((double)480*scaleResolutionHY)); // http://10.42.37.2:1182/  http://roborio-4237-frc.local:1182/?action=stream
 
     // Mats are very memory expensive. Lets reuse these.
     var mat = new Mat();
@@ -361,8 +359,8 @@ AprilTag(ID: 8, pose: Pose3d(Translation3d(X: 1.03, Y: 1.07, Z: 0.46), Rotation3
 
       { /* put a circle in the center of the camera image for aiming purposes */
         // bad code assumes a camera W x H
-        Imgproc.circle(mat, new Point(((double)640*scaleResolution/2.), ((double)480*scaleResolution/2.)),15, new Scalar(255., 0., 0.));
-        Imgproc.circle(mat, new Point(((double)640*scaleResolution/2.), ((double)480*scaleResolution/2.)),16, new Scalar(0., 255., 255.));
+        Imgproc.circle(mat, new Point(((double)640*scaleResolutionWX/2.), ((double)480*scaleResolutionHY/2.)),15, new Scalar(255., 0., 0.));
+        Imgproc.circle(mat, new Point(((double)640*scaleResolutionWX/2.), ((double)480*scaleResolutionHY/2.)),16, new Scalar(0., 255., 255.));
       }
 
       // put list of tags onto dashboard (NetworkTables)
