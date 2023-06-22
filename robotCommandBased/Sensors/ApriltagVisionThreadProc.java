@@ -45,7 +45,7 @@ import edu.wpi.first.wpilibj.Filesystem;
 
 public class ApriltagVisionThreadProc implements Runnable {
 
-  boolean ChargedUpTagLayout = true; // false is use custom deploy of layout
+  boolean ChargedUpTagLayout = false; // false is use custom deploy of layout
 
   public void run() {
     System.out.println("ApriltagVisionThreadProc");
@@ -119,13 +119,14 @@ AprilTag(ID: 8, pose: Pose3d(Translation3d(X: 1.03, Y: 1.07, Z: 0.46), Rotation3
 
     // Get the UsbCamera from CameraServer
     UsbCamera camera = CameraServer.startAutomaticCapture(); // http://10.42.37.2:1181/   http://roborio-4237-frc.local:1181/?action=stream
-    // Set the resolution
-    camera.setResolution((int)((double)640*scaleResolutionWX), (int)((double)480*scaleResolutionHY));
+    // Set the resolution and frames per second
+    camera.setResolution(cameraW, cameraH);
+    camera.setFPS(15);
 
     // Get a CvSink. This will capture Mats from the camera
     CvSink cvSink = CameraServer.getVideo();
     // Setup a CvSource. This will send images back to the Dashboard
-    CvSource outputStream = CameraServer.putVideo("Detected", (int)((double)640*scaleResolutionWX), (int)((double)480*scaleResolutionHY)); // http://10.42.37.2:1182/  http://roborio-4237-frc.local:1182/?action=stream
+    CvSource outputStream = CameraServer.putVideo("Detected", cameraW, cameraH); // http://10.42.37.2:1182/  http://roborio-4237-frc.local:1182/?action=stream
 
     // Mats are very memory expensive. Lets reuse these.
     var mat = new Mat();
@@ -182,14 +183,18 @@ AprilTag(ID: 8, pose: Pose3d(Translation3d(X: 1.03, Y: 1.07, Z: 0.46), Rotation3
 
         // determine pose transform from camera to tag
         Transform3d tagInCameraFrame = estimator.estimate(detection);
-        Transform3d tagInCameraFrameBox = tagInCameraFrame; // copy before other transforms for drawing frustum
+        Transform3d tagInCameraFrameBox = tagInCameraFrame; // copy before other transforms for drawing frustum later
 
         // PrintPose.print("tag in camera frame EDN", detection.getId(), tagInCameraFrame);
 
         // These transformations are required for the correct robot pose.
-        // They arise from the tag facing the camera thus Pi radians rotated or CCW/CW flipped from the
+        // They might arise from the tag facing the camera thus Pi radians rotated or CCW/CW flipped from the
         // mathematically described pose from the estimator that's what our eyes see. The true rotation
-        // has to be used to get the right robot pose. The estimator could have done this but it didn't.
+        // has to be used to get the right robot pose. It seems that the T and R from the estimator should
+        // take care of all this (it does when drawing the tag and orientation box) since it's consistent
+        //  with the OpenCV projectPoints.
+
+        PrintPose.print("tag in camera frame EDN 0", detection.getId(), tagInCameraFrame);
         tagInCameraFrame = new Transform3d(
           new Translation3d(
                           tagInCameraFrame.getX(),
@@ -199,7 +204,7 @@ AprilTag(ID: 8, pose: Pose3d(Translation3d(X: 1.03, Y: 1.07, Z: 0.46), Rotation3
                         -tagInCameraFrame.getRotation().getX() - Math.PI,
                        -tagInCameraFrame.getRotation().getY(),
                          tagInCameraFrame.getRotation().getZ() - Math.PI));
-
+        PrintPose.print("tag in camera frame EDN 0 fudged", detection.getId(), tagInCameraFrame);
         // Transforms to get the robot pose in the field
         // to match LimeLight Vision botpose_wpiblue network tables entries
         // as they display in AdvantageScope 3D Field robotInFieldFrame
@@ -214,8 +219,10 @@ AprilTag(ID: 8, pose: Pose3d(Translation3d(X: 1.03, Y: 1.07, Z: 0.46), Rotation3
                             //  new Translation3d(0., 0., 0.),// camera at center bottom of robot zeros for test data 
                             //  new Rotation3d(0.0, Units.degreesToRadians(0.), Units.degreesToRadians(0.0))); // camera in line with robot chassis
                         new Translation3d(0.2, 0., 0.8),// camera in front of center of robot and above ground
-                          new Rotation3d(0.0, Units.degreesToRadians(-30.), Units.degreesToRadians(0.0))); // camera in line with robot chassis
-                                                                                 // y = -30 camera points up; +30 points down; sign is correct but backwards of LL
+                          new Rotation3d(0.0, Units.degreesToRadians(-25.), Units.degreesToRadians(0.0))); // camera in line with robot chassis
+        // x + roll is camera rolling CCW relative to the robot looking facing the robot
+        // y + pitch is camera pointing down relative to the robot. -25 camera points up; +25 points down; sign is correct but backwards of LL
+        // z + yaw is camera pointing to the left of robot looking down on it (CCW relative to the robot)
 
         var // robot in field is the composite of 3 pieces
         robotInFieldFrame = ComputerVisionUtil.objectToRobotPose(tagInFieldFrame,  tagInCameraFrame,  cameraInRobotFrame);
@@ -261,6 +268,9 @@ AprilTag(ID: 8, pose: Pose3d(Translation3d(X: 1.03, Y: 1.07, Z: 0.46), Rotation3
               var pt1 = new Point(detection.getCornerX(i), detection.getCornerY(i));
               var pt2 = new Point(detection.getCornerX(j), detection.getCornerY(j));
               Imgproc.line(mat, pt1, pt2, outlineColor, 2);
+              // corners appear as 3 2
+              //                   0 1
+
           }
 
           // mark the center of the tag
@@ -282,6 +292,7 @@ AprilTag(ID: 8, pose: Pose3d(Translation3d(X: 1.03, Y: 1.07, Z: 0.46), Rotation3
         } // end draw lines around the tag
         
         { // draw a frustum in front of the AprilTag
+          // use the estimated pose from above before any other transforms  
 
           // camera same as above but different format for OpenCV
           float[] cameraParm = {(float)cameraFx,   0.f,             (float)cameraCx,
@@ -292,19 +303,23 @@ AprilTag(ID: 8, pose: Pose3d(Translation3d(X: 1.03, Y: 1.07, Z: 0.46), Rotation3
 
           MatOfDouble distCoeffs = new MatOfDouble(); // not using any camera distortions so it's empty
 
-          // 3D points of ideal, original corners, flat on the tag, scaled to the actual tag size
+          // 3D points of ideal, original corners, flat on the tag, scaled to the actual tag size.
+          // Order doesn't matter except must be in same order as the top points so pillars connect right.
+          // We could reuse the corners from detector if we know the order (and we do) and avoid redundant
+          // variable and recalculation but we'll re-specify them for fun and match the detectors corners order.
           MatOfPoint3f bottom = new MatOfPoint3f(
             new Point3(-1.*tagSize/2.,1.*tagSize/2., 0.),
                 new Point3(1.*tagSize/2., 1.*tagSize/2., 0.),
                 new Point3(1.*tagSize/2., -1.*tagSize/2., 0.),
                 new Point3(-1.*tagSize/2., -1.*tagSize/2., 0.));
 
+
           // 3D points of the ideal, original corners, in front of the tag to make a frustum, scaled to the actual tag size
           // note that the orientation and size of the face of the box can be controlled by the sign of the "Z"
           // value of the "top" variable.
           // "-" (negative) gives larger top facing straight away from the plane of the tag
           // "+" (positive) gives smaller top facing toward the camera
-          MatOfPoint3f top = new MatOfPoint3f(
+          MatOfPoint3f top = new MatOfPoint3f( // order doesn't matter except must be in same order as the bottom points
             new Point3(-1.*tagSize/2.,1.*tagSize/2., -0.7*tagSize),
                 new Point3(1.*tagSize/2., 1.*tagSize/2., -0.7*tagSize),
                 new Point3(1.*tagSize/2., -1.*tagSize/2., -0.7*tagSize),
