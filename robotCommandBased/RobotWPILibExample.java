@@ -39,8 +39,8 @@ import edu.wpi.first.math.util.Units;
 import edu.wpi.first.networktables.IntegerArrayPublisher;
 import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableInstance;
+import edu.wpi.first.wpilibj.DigitalOutput;
 import edu.wpi.first.wpilibj.TimedRobot;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 /**
  * This is a demo program showing the detection of AprilTags. The image is acquired from the USB
@@ -48,6 +48,14 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
  * the field pose and sent to the dashboard.
  *
  * <p>Be aware that the performance on this is much worse than a coprocessor solution!
+ * 
+ * Note that a thread is included to time the latency of acquiring an image.
+ * It turns on the (red, if that's what's inserted) leds on the DIO ports and starts a timer.
+ * The timer stops when the red leds are seen in the image in the program.
+ * The latency of acquiring the image depends only of the fps setting of the camera.
+ * The leds were seen immediately after they were turned on so the latency of the leds
+ * and the camera server was very low compared to the fps of the camera.
+ * Timing the frame grab appears to account for this latency at least for the LifeCam. 
  */
 public class Robot extends TimedRobot {
   
@@ -70,6 +78,11 @@ public class Robot extends TimedRobot {
     var visionThread2 = new Thread(() -> acquireRobotPoseThread());
     visionThread2.setDaemon(true);
     visionThread2.start();
+    
+  //   // latency testing thread
+  //   var visionThread3 = new Thread(this::latencyThread);
+  //   visionThread3.setDaemon(true);
+  //   visionThread3.start();
   }
 
   void acquireApriltagThread() {
@@ -83,7 +96,8 @@ public class Robot extends TimedRobot {
     UsbCamera camera = CameraServer.startAutomaticCapture();
     // Set the resolution and frames per second
     camera.setResolution(cameraW, cameraH);
-    camera.setFPS(20);
+    camera.setFPS(30); // need to add 29ms estimated latency at this fps
+    camera.setExposureAuto();
 
     // Get a CvSink. This will capture Mats from the camera
     CvSink cvSink = CameraServer.getVideo();
@@ -153,12 +167,15 @@ public class Robot extends TimedRobot {
     double cameraFy = 677.7161226393544*scaleResolutionHY; // no scaling  at 480
     double cameraCx = 345.6059345433618*scaleResolutionWX; // no scaling  at 640
     double cameraCy = 207.12741326228522*scaleResolutionHY; // no scaling  at 480
-/*     353.74653217742724, fx 320x240 lifecam from PhotonVision
+/*
+Could use these camera parameters from PhotonVision for 320x240 now that they have been found.
+Otherwise the theoretical values are dependent directly on the resolution factor which has been coded.
+      353.74653217742724, fx    320x240 lifecam from PhotonVision
       0.0,
-      163.55407989211918,cx
+      163.55407989211918, cx
       0.0,
-      340.77624878700817,fy
-      119.8945718300403,cy
+      340.77624878700817, fy
+      119.8945718300403, cy
 */
     double tagSize = 0.1524; // meters
 
@@ -409,6 +426,117 @@ public class Robot extends TimedRobot {
       outputStream.putFrame(mat);
   }
     pubTags.close();
+  }
+
+  void latencyThread() {
+
+    int frameNumber = 0;
+
+    DigitalOutput[] DO = new DigitalOutput[10];
+
+    for (int i = 0; i<=9; i++)
+    {
+      DO[i] = new DigitalOutput(i);
+      DO[i].set(false);
+    }
+    // Get the UsbCamera from CameraServer
+    UsbCamera camera = CameraServer.startAutomaticCapture();
+    // Set the resolution and frames per second
+    camera.setResolution(cameraW, cameraH);
+    camera.setFPS(30);
+    camera.setExposureManual(0);
+
+    // Get a CvSink. This will capture Mats from the camera
+    CvSink cvSink = CameraServer.getVideo();
+
+    // Mats are very memory expensive. Lets reuse these.
+    var mat = new Mat();
+
+    try {
+      Thread.sleep(5000);
+    } catch (InterruptedException e) {
+    }
+
+    // This cannot be 'true'. The program will never exit if it is. This
+    // lets the robot stop this thread when restarting robot code or
+    // deploying.
+    while (!Thread.interrupted()) {
+    
+      frameNumber++;
+      long acquisitionTimeStart = 0;
+
+      // before grabbing frame 11 turn on red leds and start timing
+      
+      if(frameNumber == 11)
+      {  
+        for (int i = 0; i<=9; i++)
+        {
+          DO[i].set(true);
+
+          acquisitionTimeStart = System.nanoTime();
+        }
+      }
+
+      // Tell the CvSink to grab a frame from the camera and put it
+      // in the source mat.  If there is an error notify the output.
+
+      if (cvSink.grabFrame(mat) == 0) {
+        // Send the output the error.
+        System.out.println(cvSink.getError());
+        // skip the rest of the current iteration
+        continue;
+      }
+      long acquisitionTimeStop = System.nanoTime();
+
+      // check for red leds visible in this frame
+      Mat out = new Mat();
+      Core.inRange(mat, new Scalar(0, 0, 80), // BGR
+			new Scalar(20,20, 255), out); // BGR
+      
+      int countRedPixels =Core.countNonZero(out);
+
+      if(countRedPixels < 10) // expect 0 for no red leds on and about 4000 to 6000 for them on
+      {
+        continue; // no leds visible yet; go on to next frame
+      }
+      else // found leds so record that event
+      {
+        System.out.println("frame " + frameNumber + " latency " + (acquisitionTimeStop - acquisitionTimeStart));
+        try {
+          Thread.sleep(1000); // slow down the loop so roboRIO isn't essentially locked up from now on
+        } catch (InterruptedException e) {
+          e.printStackTrace();
+        }
+      }
+/*
+Waiting for the leds to turn on had essentially no effect on the timing.
+The leds are seen in the first frame grabbed immediately after turning on the leds.
+The latency depends of the fps setting in the camera and not much else.
+CS: USB Camera 0: set FPS to 20 and latency is then about 45ms
+timed out getting frame
+frame 11 latency 44766672
+frame 12 latency 48272467
+frame 13 latency 42921070
+frame 14 latency 46596670
+frame 15 latency 44432179
+frame 16 latency 43642573
+frame 17 latency 48033874
+frame 18 latency 44152656
+
+CS: USB Camera 0: set FPS to 30 and latency is then about 29ms
+frame 11 latency 28865001
+frame 12 latency 31301125
+frame 13 latency 27401602
+frame 14 latency 27725163
+frame 15 latency 32354749
+frame 16 latency 25975455
+frame 17 latency 28815310
+frame 18 latency 30473760
+frame 19 latency 28079323
+frame 20 latency 28989054
+frame 21 latency 30769216
+*/
+    }
   }
 
   /**
