@@ -39,7 +39,6 @@ import edu.wpi.first.math.util.Units;
 import edu.wpi.first.networktables.IntegerArrayPublisher;
 import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableInstance;
-import edu.wpi.first.wpilibj.DigitalOutput;
 import edu.wpi.first.wpilibj.TimedRobot;
 
 /**
@@ -49,13 +48,12 @@ import edu.wpi.first.wpilibj.TimedRobot;
  *
  * <p>Be aware that the performance on this is much worse than a coprocessor solution!
  * 
- * Note that a thread is included to time the latency of acquiring an image.
- * It turns on the (red, if that's what's inserted) leds on the DIO ports and starts a timer.
- * The timer stops when the red leds are seen in the image in the program.
- * The latency of acquiring the image depends only of the fps setting of the camera.
- * The leds were seen immediately after they were turned on so the latency of the leds
- * and the camera server was very low compared to the fps of the camera.
- * Timing the frame grab appears to account for this latency at least for the LifeCam. 
+ * This example includes an estimated latency time from image appearing to through to
+ * the end of processing the robot pose.
+ * The latency of acquiring the image from the camera mostly depends on the fps setting
+ * of the camera, the shutter is global or where the object is if progressive scan.
+ * Timing starts before the frame grab statement and that appears to account for much
+ * of the camera latency at least for the LifeCam. 
  */
 public class Robot extends TimedRobot {
   
@@ -63,6 +61,8 @@ public class Robot extends TimedRobot {
     System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
 }
 
+// theoretically the resolution factor also directly effects the other camera parameters
+// but apparently recalibrating at various resolutions does yield slightly varying results.
   double scaleResolutionWX = 0.5; // basis of camera width resolution is 640 so scaling to 320
   double scaleResolutionHY = 0.5; // basis of camera height resolution is 480 so scaling to 240
   int cameraW = (int)(640*scaleResolutionWX); // no scaling at 640
@@ -77,12 +77,7 @@ public class Robot extends TimedRobot {
 
     var visionThread2 = new Thread(() -> acquireRobotPoseThread());
     visionThread2.setDaemon(true);
-    visionThread2.start();
-    
-  //   // latency testing thread
-  //   var visionThread3 = new Thread(this::latencyThread);
-  //   visionThread3.setDaemon(true);
-  //   visionThread3.start();
+    visionThread2.start();  
   }
 
   void acquireApriltagThread() {
@@ -96,8 +91,8 @@ public class Robot extends TimedRobot {
     UsbCamera camera = CameraServer.startAutomaticCapture();
     // Set the resolution and frames per second
     camera.setResolution(cameraW, cameraH);
-    camera.setFPS(30); // need to add 29ms estimated latency at this fps
-    camera.setExposureAuto();
+    camera.setFPS(100); // 30 for lifecam
+    // camera.setExposureAuto();
 
     // Get a CvSink. This will capture Mats from the camera
     CvSink cvSink = CameraServer.getVideo();
@@ -122,7 +117,9 @@ public class Robot extends TimedRobot {
         continue;
       }
 
-      Imgproc.cvtColor(mat, grayMat, Imgproc.COLOR_RGB2GRAY);
+      // Imgproc.cvtColor(mat, grayMat, Imgproc.COLOR_RGB2GRAY); // color camera to  1 gray channel
+   
+      Core.extractChannel(mat, grayMat, 0); // monochrome camera on 3 channels to 1 gray channel
 
       AprilTagDetection[] detections = detector.detect(grayMat);
 
@@ -148,11 +145,12 @@ public class Robot extends TimedRobot {
 
     // Instantiate once
     ArrayList<Long> tags = new ArrayList<>();
-    var outlineColor = new Scalar(0, 255, 0);
-    var crossColor = new Scalar(0, 0, 255);
+    var outlineColor = new Scalar(0, 255, 0); // bgr
+    var crossColor = new Scalar(0, 0, 255); // bgr
     Mat mat = new Mat();
     AcquisitionTime acquisitionTime = new AcquisitionTime();
     int latency = 0;
+    int latencySample = 0;
     int latencyDisplay = 0;
 
     // Setup a CvSource. This will send images back to the Dashboard
@@ -169,11 +167,9 @@ public class Robot extends TimedRobot {
     double cameraCy = 207.12741326228522*scaleResolutionHY; // no scaling  at 480
 /*
 Could use these camera parameters from PhotonVision for 320x240 now that they have been found.
-Otherwise the theoretical values are dependent directly on the resolution factor which has been coded.
+Otherwise, the theoretical values are dependent directly on the resolution factor which has been coded.
       353.74653217742724, fx    320x240 lifecam from PhotonVision
-      0.0,
       163.55407989211918, cx
-      0.0,
       340.77624878700817, fy
       119.8945718300403, cy
 */
@@ -248,79 +244,79 @@ Otherwise the theoretical values are dependent directly on the resolution factor
       { // draw a frustum in front of the AprilTag
         // use the estimated pose from above before any other transforms  
 
-          // camera same as above but different format for OpenCV
-          float[] cameraParm = {(float)cameraFx,   0.f,             (float)cameraCx,
-                                  0.f,             (float)cameraFy, (float)cameraCy,
-                                  0.f,             0.f,             1.f};
-          Mat K = new Mat(3, 3, CvType.CV_32F); // camera matrix
-          K.put(0, 0, cameraParm);
+        // camera same as above but different format for OpenCV
+        float[] cameraParm = {(float)cameraFx,   0.f,             (float)cameraCx,
+                                0.f,             (float)cameraFy, (float)cameraCy,
+                                0.f,             0.f,             1.f};
+        Mat K = new Mat(3, 3, CvType.CV_32F); // camera matrix
+        K.put(0, 0, cameraParm);
 
-          MatOfDouble distCoeffs = new MatOfDouble(); // not using any camera distortions so it's empty
+        MatOfDouble distCoeffs = new MatOfDouble(); // not using any camera distortions so it's empty
 
-          // 3D points of ideal, original corners, flat on the tag, scaled to the actual tag size.
-          // Order doesn't matter except must be in same order as the top points so pillars connect right.
-          // We could reuse the corners from detector if we know the order (and we do) and avoid redundant
-          // variable and recalculation but we'll re-specify them for fun and match the detectors corners order.
-          MatOfPoint3f bottom = new MatOfPoint3f(
-            new Point3(-1.*tagSize/2.,1.*tagSize/2., 0.),
-                new Point3(1.*tagSize/2., 1.*tagSize/2., 0.),
-                new Point3(1.*tagSize/2., -1.*tagSize/2., 0.),
-                new Point3(-1.*tagSize/2., -1.*tagSize/2., 0.));
+        // 3D points of ideal, original corners, flat on the tag, scaled to the actual tag size.
+        // Order doesn't matter except must be in same order as the top points so pillars connect right.
+        // We could reuse the corners from detector if we know the order (and we do) and avoid redundant
+        // variable and recalculation but we'll re-specify them for fun and match the detectors corners order.
+        MatOfPoint3f bottom = new MatOfPoint3f(
+          new Point3(-1.*tagSize/2.,1.*tagSize/2., 0.),
+              new Point3(1.*tagSize/2., 1.*tagSize/2., 0.),
+              new Point3(1.*tagSize/2., -1.*tagSize/2., 0.),
+              new Point3(-1.*tagSize/2., -1.*tagSize/2., 0.));
 
-          // 3D points of the ideal, original corners, in front of the tag to make a frustum, scaled to the actual tag size
-          // note that the orientation and size of the face of the box can be controlled by the sign of the "Z"
-          // value of the "top" variable.
-          // "-" (negative) gives larger top facing straight away from the plane of the tag
-          // "+" (positive) gives smaller top facing toward the camera
-          MatOfPoint3f top = new MatOfPoint3f( // order doesn't matter except must be in same order as the bottom points
-            new Point3(-1.*tagSize/2.,1.*tagSize/2., -0.7*tagSize),
-                new Point3(1.*tagSize/2., 1.*tagSize/2., -0.7*tagSize),
-                new Point3(1.*tagSize/2., -1.*tagSize/2., -0.7*tagSize),
-                new Point3(-1.*tagSize/2., -1.*tagSize/2., -0.7*tagSize));
+        // 3D points of the ideal, original corners, in front of the tag to make a frustum, scaled to the actual tag size
+        // note that the orientation and size of the face of the box can be controlled by the sign of the "Z"
+        // value of the "top" variable.
+        // "-" (negative) gives larger top facing straight away from the plane of the tag
+        // "+" (positive) gives smaller top facing toward the camera
+        MatOfPoint3f top = new MatOfPoint3f( // order doesn't matter except must be in same order as the bottom points
+          new Point3(-1.*tagSize/2.,1.*tagSize/2., -0.7*tagSize),
+              new Point3(1.*tagSize/2., 1.*tagSize/2., -0.7*tagSize),
+              new Point3(1.*tagSize/2., -1.*tagSize/2., -0.7*tagSize),
+              new Point3(-1.*tagSize/2., -1.*tagSize/2., -0.7*tagSize));
 
-          double[] rotationVector = pose.getRotation().getQuaternion().toRotationVector().getData(); // 3x1 3 rows 1 col
+        double[] rotationVector = pose.getRotation().getQuaternion().toRotationVector().getData(); // 3x1 3 rows 1 col
 
-          Mat T = new Mat(3, 1, CvType.CV_64FC1);
-          Mat R = new Mat(3, 1, CvType.CV_64FC1);
-          T.put(0, 0, pose.getX(), pose.getY(), pose.getZ());
-          R.put(0, 0, rotationVector[0], rotationVector[1], rotationVector[2]);
+        Mat T = new Mat(3, 1, CvType.CV_64FC1);
+        Mat R = new Mat(3, 1, CvType.CV_64FC1);
+        T.put(0, 0, pose.getX(), pose.getY(), pose.getZ());
+        R.put(0, 0, rotationVector[0], rotationVector[1], rotationVector[2]);
 
-          MatOfPoint2f imagePointsBottom = new MatOfPoint2f();
-          Calib3d.projectPoints(bottom, R, T, K, distCoeffs, imagePointsBottom);
+        MatOfPoint2f imagePointsBottom = new MatOfPoint2f();
+        Calib3d.projectPoints(bottom, R, T, K, distCoeffs, imagePointsBottom);
 
-          MatOfPoint2f imagePointsTop = new MatOfPoint2f();
-          Calib3d.projectPoints(top, R, T, K, distCoeffs, imagePointsTop);
-          
-          ArrayList<Point> topCornerPoints = new ArrayList<Point>();
+        MatOfPoint2f imagePointsTop = new MatOfPoint2f();
+        Calib3d.projectPoints(top, R, T, K, distCoeffs, imagePointsTop);
+        
+        ArrayList<Point> topCornerPoints = new ArrayList<Point>();
 
-          // draw from bottom points to top points - pillars
-          for(int i = 0; i < 4; i++)
-          {
-              double x1;
-              double y1;
-              double x2;
-              double y2;
-              x1 = imagePointsBottom.get(i, 0)[0];
-              y1 = imagePointsBottom.get(i, 0)[1];
-              x2 = imagePointsTop.get(i, 0)[0];
-              y2 = imagePointsTop.get(i, 0)[1];
+        // draw from bottom points to top points - pillars
+        for(int i = 0; i < 4; i++)
+        {
+            double x1;
+            double y1;
+            double x2;
+            double y2;
+            x1 = imagePointsBottom.get(i, 0)[0];
+            y1 = imagePointsBottom.get(i, 0)[1];
+            x2 = imagePointsTop.get(i, 0)[0];
+            y2 = imagePointsTop.get(i, 0)[1];
 
-              topCornerPoints.add(new Point(x2, y2));
+            topCornerPoints.add(new Point(x2, y2));
 
-              Imgproc.line(mat,
-                  new Point(x1, y1),
-                  new Point(x2, y2),
-                  outlineColor,
-                  2);
-          }
+            Imgproc.line(mat,
+                new Point(x1, y1),
+                new Point(x2, y2),
+                outlineColor,
+                2);
+        }
 
-          MatOfPoint topCornersTemp = new MatOfPoint();
-          topCornersTemp.fromList(topCornerPoints);
-          ArrayList<MatOfPoint> topCorners = new ArrayList<>();
-          topCorners.add(topCornersTemp);
+        MatOfPoint topCornersTemp = new MatOfPoint();
+        topCornersTemp.fromList(topCornerPoints);
+        ArrayList<MatOfPoint> topCorners = new ArrayList<>();
+        topCorners.add(topCornersTemp);
 
-          Imgproc.polylines(mat, topCorners, true, outlineColor, 2);
-        } /* end draw a frustum in front of the AprilTag */
+        Imgproc.polylines(mat, topCorners, true, outlineColor, 2);
+      } /* end draw a frustum in front of the AprilTag */
 
       // These transformations are required for the correct robot pose.
       // They appear to arise from the tag facing the camera thus Pi radians rotated or CCW/CW flipped from
@@ -328,16 +324,15 @@ Otherwise the theoretical values are dependent directly on the resolution factor
       // has to be used to get the right robot pose. It seems that the T and R from the estimator could take
       // care of all this (it is consistent without the extra transform when drawing the tag and orientation box).
 
-          pose = new Transform3d(
-          new Translation3d(
-                        pose.getX(),
-                        pose.getY(),
-                        pose.getZ()),
-          new Rotation3d(
-                      -pose.getRotation().getX() - Math.PI,
-                      -pose.getRotation().getY(),
-                       pose.getRotation().getZ() - Math.PI));
-
+      pose = new Transform3d(
+      new Translation3d(
+                    pose.getX(),
+                    pose.getY(),
+                    pose.getZ()),
+      new Rotation3d(
+                  -pose.getRotation().getX() - Math.PI,
+                  -pose.getRotation().getY(),
+                  pose.getRotation().getZ() - Math.PI));
 
       // OpenCV and WPILib estimator layout of axes is EDN and field WPILib is NWU; need x -> -y , y -> -z , z -> x and same for differential rotations
       // pose = CoordinateSystem.convert(pose, CoordinateSystem.EDN(), CoordinateSystem.NWU());
@@ -391,207 +386,99 @@ Otherwise the theoretical values are dependent directly on the resolution factor
                   robotInFieldFrame.getRotation().getQuaternion().getZ()
           });
     
-    // put out to NetworkTables this tag pose AdvantageScope format
-    tagsTable
-      .getEntry("tagpose_" + detection.getId())
-      .setDoubleArray(
-          new double[] {
-                  tagInFieldFrame.getTranslation().getX(),
-                  tagInFieldFrame.getTranslation().getY(),
-                  tagInFieldFrame.getTranslation().getZ(),
-                  tagInFieldFrame.getRotation().getQuaternion().getW(),
-                  tagInFieldFrame.getRotation().getQuaternion().getX(),
-                  tagInFieldFrame.getRotation().getQuaternion().getY(),
-                  tagInFieldFrame.getRotation().getQuaternion().getZ()
-          });
-    }
+      // put out to NetworkTables this tag pose AdvantageScope format
+      tagsTable
+        .getEntry("tagpose_" + detection.getId())
+        .setDoubleArray(
+            new double[] {
+                    tagInFieldFrame.getTranslation().getX(),
+                    tagInFieldFrame.getTranslation().getY(),
+                    tagInFieldFrame.getTranslation().getZ(),
+                    tagInFieldFrame.getRotation().getQuaternion().getW(),
+                    tagInFieldFrame.getRotation().getQuaternion().getX(),
+                    tagInFieldFrame.getRotation().getQuaternion().getY(),
+                    tagInFieldFrame.getRotation().getQuaternion().getZ()
+            });
+    } // end of all detections
 
-    
-    if(latencyDisplay++%6 == 0)
+    latency = (int)(1.e-6*(System.nanoTime() - acquisitionTime.acquisitionTime));
+
+    // all the data available at this point.
+
+    if(latencyDisplay++%6 == 0) // sample every 6th to cut the visible jitter a lot
     {
-      latency = (int)(1.e-6*(System.nanoTime() - acquisitionTime.acquisitionTime));
+      latencySample = latency;
     }
-      Imgproc.putText(
-        mat,
-        "latency [ms] " + latency,
-        new Point(80, 14),
-        Imgproc.FONT_HERSHEY_SIMPLEX,
-        .35,
-        crossColor,
-        1);
+    Imgproc.putText(
+      mat,
+      String.format("latency [ms]%4d", latencySample),
+      new Point(80, 14),
+      Imgproc.FONT_HERSHEY_SIMPLEX,
+      .35,
+      new Scalar(100, 100, 255),
+      1);
 
-      // put list of tags onto dashboard
-      pubTags.set(tags.stream().mapToLong(Long::longValue).toArray());
-      // Give the output stream a new image to display
-      outputStream.putFrame(mat);
+    // put list of tags onto dashboard
+    pubTags.set(tags.stream().mapToLong(Long::longValue).toArray());
+    // Give the output stream a new image to display
+    outputStream.putFrame(mat);
   }
     pubTags.close();
   }
 
-  void latencyThread() {
+  /**
+   * image from camera in OpenCV Mat form and detections
+   */
+  public class Image
+  {
+      private Mat mat = new Mat();
+      private AprilTagDetection[] detections;
+      private long acquisitionTime = 0L;
+      private int frameNumber = 0;
+      private boolean isFreshImage = false;
 
-    int frameNumber = 0;
-
-    DigitalOutput[] DO = new DigitalOutput[10];
-
-    for (int i = 0; i<=9; i++)
-    {
-      DO[i] = new DigitalOutput(i);
-      DO[i].set(false);
-    }
-    // Get the UsbCamera from CameraServer
-    UsbCamera camera = CameraServer.startAutomaticCapture();
-    // Set the resolution and frames per second
-    camera.setResolution(cameraW, cameraH);
-    camera.setFPS(30);
-    camera.setExposureManual(0);
-
-    // Get a CvSink. This will capture Mats from the camera
-    CvSink cvSink = CameraServer.getVideo();
-
-    // Mats are very memory expensive. Lets reuse these.
-    var mat = new Mat();
-
-    try {
-      Thread.sleep(5000);
-    } catch (InterruptedException e) {
-    }
-
-    // This cannot be 'true'. The program will never exit if it is. This
-    // lets the robot stop this thread when restarting robot code or
-    // deploying.
-    while (!Thread.interrupted()) {
-    
-      frameNumber++;
-      long acquisitionTimeStart = 0;
-
-      // before grabbing frame 11 turn on red leds and start timing
-      
-      if(frameNumber == 11)
-      {  
-        for (int i = 0; i<=9; i++)
-        {
-          DO[i].set(true);
-
-          acquisitionTimeStart = System.nanoTime();
-        }
-      }
-
-      // Tell the CvSink to grab a frame from the camera and put it
-      // in the source mat.  If there is an error notify the output.
-
-      if (cvSink.grabFrame(mat) == 0) {
-        // Send the output the error.
-        System.out.println(cvSink.getError());
-        // skip the rest of the current iteration
-        continue;
-      }
-      long acquisitionTimeStop = System.nanoTime();
-
-      // check for red leds visible in this frame
-      Mat out = new Mat();
-      Core.inRange(mat, new Scalar(0, 0, 80), // BGR
-			new Scalar(20,20, 255), out); // BGR
-      
-      int countRedPixels =Core.countNonZero(out);
-
-      if(countRedPixels < 10) // expect 0 for no red leds on and about 4000 to 6000 for them on
+      public synchronized void setImage(Mat mat, AprilTagDetection[] detections, long acquisitionTime, int frameNumber)
       {
-        continue; // no leds visible yet; go on to next frame
+          mat.copyTo(this.mat);
+          this.detections = detections.clone();
+          this.acquisitionTime = acquisitionTime;
+          this.frameNumber = frameNumber;
+          this.isFreshImage = true;
+          notify(); // fresh image so tell whoever is waiting for it
       }
-      else // found leds so record that event
-      {
-        System.out.println("frame " + frameNumber + " latency " + (acquisitionTimeStop - acquisitionTimeStart));
-        try {
-          Thread.sleep(1000); // slow down the loop so roboRIO isn't essentially locked up from now on
-        } catch (InterruptedException e) {
-          e.printStackTrace();
-        }
-      }
-/*
-Waiting for the leds to turn on had essentially no effect on the timing.
-The leds are seen in the first frame grabbed immediately after turning on the leds.
-The latency depends of the fps setting in the camera and not much else.
-CS: USB Camera 0: set FPS to 20 and latency is then about 45ms
-timed out getting frame
-frame 11 latency 44766672
-frame 12 latency 48272467
-frame 13 latency 42921070
-frame 14 latency 46596670
-frame 15 latency 44432179
-frame 16 latency 43642573
-frame 17 latency 48033874
-frame 18 latency 44152656
 
-CS: USB Camera 0: set FPS to 30 and latency is then about 29ms
-frame 11 latency 28865001
-frame 12 latency 31301125
-frame 13 latency 27401602
-frame 14 latency 27725163
-frame 15 latency 32354749
-frame 16 latency 25975455
-frame 17 latency 28815310
-frame 18 latency 30473760
-frame 19 latency 28079323
-frame 20 latency 28989054
-frame 21 latency 30769216
-*/
-    }
+      public synchronized AprilTagDetection[] getImage(Mat mat,  AcquisitionTime acquisitionTime)
+
+      {
+          try
+          {
+              while(!this.isFreshImage) // make sure awakened for the right reason
+              {
+                  wait(0L, 0); // stale image so wait for a new image no timeout
+              }
+          } 
+          catch (Exception e)
+          {
+              System.out.println("getImage Exception " + e.toString());
+              throw new RuntimeException(e);
+          }
+          this.isFreshImage = false;
+          this.mat.copyTo(mat);
+          acquisitionTime.acquisitionTime = this.acquisitionTime;
+          acquisitionTime.frameNumber = this.frameNumber;
+          return this.detections;
+      }
+
+      public synchronized boolean isFreshImage()
+      {
+          return this.isFreshImage;
+      }
   }
 
-  /**
- * image from camera in OpenCV Mat form and detections
- */
-public class Image
-{
-    private Mat mat = new Mat();
-    AprilTagDetection[] detections;
-    long acquisitionTime = 0L;
-    int frameNumber = 0;
-    private boolean isFreshImage = false;
-
-    public synchronized void setImage(Mat mat, AprilTagDetection[] detections, long acquisitionTime, int frameNumber)
-    {
-        mat.copyTo(this.mat);
-        this.detections = detections.clone();
-        this.acquisitionTime = acquisitionTime;
-        this.frameNumber = frameNumber;
-        this.isFreshImage = true;
-        notify(); // fresh image so tell whoever is waiting for it
-    }
-
-    public synchronized AprilTagDetection[] getImage(Mat mat,  AcquisitionTime acquisitionTime)
-
-    {
-        try
-        {
-            while(!this.isFreshImage) // make sure awakened for the right reason
-            {
-                wait(0L, 0); // stale image so wait for a new image no timeout
-            }
-        } 
-        catch (Exception e)
-        {
-            System.out.println("getImage Exception " + e.toString());
-            throw new RuntimeException(e);
-        }
-        this.isFreshImage = false;
-        this.mat.copyTo(mat);
-        acquisitionTime.acquisitionTime = this.acquisitionTime;
-        acquisitionTime.frameNumber = this.frameNumber;
-        return this.detections;
-    }
-
-    public synchronized boolean isFreshImage()
-    {
-        return this.isFreshImage;
-    }
-}
-
-class AcquisitionTime
-{
-  protected int frameNumber = 0;
-  protected long acquisitionTime = 0;
-}
+  class AcquisitionTime
+  {
+    protected int frameNumber = 0;
+    protected long acquisitionTime = 0;
+  }
 
 }
