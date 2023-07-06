@@ -1,7 +1,9 @@
 // Based on https://github.com/wpilibsuite/StandaloneAppSamples/tree/main/Java
 // and JavaCvSink.java from WPILib ShuffleBoard
-// and OpenCV
+// and OpenCV 4.8.0 (and up I would hope)
 
+// in a terminal window compile and run the program
+// first SAVE the files because there is no auto save in the gradlew.bat
 // .\gradlew.bat shadowJar
 // java -jar build\libs\TestApplication-winx64.jar
 
@@ -48,57 +50,63 @@ import edu.wpi.first.networktables.NetworkTablesJNI;
 import edu.wpi.first.util.CombinedRuntimeLoader;
 import edu.wpi.first.util.WPIUtilJNI;
 
-/**
- * Program
- */
 public class Program {
-    static {
+  /// USER CONFIGURATION
+        static final boolean writeBoard = false; // make a ChArUco Board image in a jpg to print
+        // print the board then measure it carefully; put those measurements below and rerun to calibrate
+        static final float squareLength = /*0.015f;*/ .018536f;
+        static final float markerLength = /*0.012f;*/ .01486f;
+        static final int camId = 1; // Checks for the specified camera and uses it if present. 0 internal, 1 external if there is a 0 internal (sometimes)
+        static final int cameraW = 320;
+        static final int cameraH = 240;
+        static final int cameraFPS = 121;
+  /// end USER CONFIGURATION
+
+        static {
         System.loadLibrary(Core.NATIVE_LIBRARY_NAME); // Load the native OpenCV library
         // System.loadLibrary("opencv_videoio_ffmpeg480_64");
       }
 
     public static void main(String[] args) throws IOException {
+
         NetworkTablesJNI.Helper.setExtractOnStaticLoad(false);
         WPIUtilJNI.Helper.setExtractOnStaticLoad(false);
         WPIMathJNI.Helper.setExtractOnStaticLoad(false);
         CameraServerJNI.Helper.setExtractOnStaticLoad(false);
-
         CombinedRuntimeLoader.loadLibraries(Program.class, "wpiutiljni", "wpimathjni", "ntcorejni", "cscorejnicvstatic");
-
-        // var inst = NetworkTableInstance.getDefault();
+        // var inst = NetworkTableInstance.getDefault(); // not using NT in this program
 
         // int printCount = 0;
 
         /// Charco Board
         // print the board then measure it carefully and put those measurements below
-        Dictionary dictionary = Objdetect.getPredefinedDictionary(Objdetect.DICT_5X5_1000);
-        int squaresX = 11;
-        int squaresY = 8;
-        float squareLength = /*0.015f;*/ .018536f;
-        float markerLength = /*0.012f;*/ .01486f;
-        CharucoBoard board = new CharucoBoard(new Size(squaresX, squaresY), squareLength, markerLength, dictionary);
-        Mat boardImage = new Mat();
-        Size boardImageSize = new Size(1280, 720);
+        final Dictionary dictionary = Objdetect.getPredefinedDictionary(Objdetect.DICT_5X5_1000);
+        final int squaresX = 11;
+        final int squaresY = 8;
+        final CharucoBoard board = new CharucoBoard(new Size(squaresX, squaresY), squareLength, markerLength, dictionary);
+        final Mat boardImage = new Mat();
+        final Size boardImageSize = new Size(1280, 720);
         board.generateImage(boardImageSize, boardImage);
 
-        boolean writeBoard = false;
         if(writeBoard)
         {
           // write ChArUco Board to print and use for calibration
-          MatOfInt writeBoardParams = new MatOfInt(Imgcodecs.IMWRITE_JPEG_QUALITY, 100); // pair-wise; param1, value1, ...
-          String file = "ChArUcoBoard.jpg";
+          final MatOfInt writeBoardParams = new MatOfInt(Imgcodecs.IMWRITE_JPEG_QUALITY, 100); // pair-wise; param1, value1, ...
+          final String file = "ChArUcoBoard.jpg";
           Imgcodecs.imwrite(
             file,
             boardImage,
             writeBoardParams);
+          // HighGui.imshow("ChArUcoBoard", boardImage);
+          // HighGui.waitKey();
           System.exit(0);
         }
         ///
 
         /// detector parameters
-        DetectorParameters detectParams = new DetectorParameters();
-        RefineParameters refineParams = new RefineParameters();
-        CharucoParameters charucoParams = new CharucoParameters();
+        final DetectorParameters detectParams = new DetectorParameters();
+        final RefineParameters refineParams = new RefineParameters();
+        final CharucoParameters charucoParams = new CharucoParameters();
         // detectParams
         // refineParams
         charucoParams.set_tryRefineMarkers(true);
@@ -106,35 +114,23 @@ public class Program {
         CharucoDetector detector = new CharucoDetector(board, charucoParams, detectParams, refineParams);
         ///
 
+        final int waitTime = 30;
+        final Size imgSize = new Size(cameraW, cameraH);
+
         /// video image capture
-        int camId = 1; // Checks for the specified camera and uses it if present. 0 internal, 1 external if there is a 0 internal (sometimes)
-        int waitTime = 30;
-
-        int cameraW = 320;
-        int cameraH = 240;
-        Size
-          // imgSize = new Size(1280, 720);
-          // imgSize = new Size(640, 480);
-          imgSize = new Size(cameraW, cameraH);
-
 
         // Get the UsbCamera from CameraServer
-        UsbCamera camera = CameraServer.startAutomaticCapture(camId);
-        // USB\VID_04F2&PID_B230&MI_00\7&369E123A&8&0000 laptop internal path
-        // USB\VID_0C45&PID_6366&MI_00\8&2355927A&2&0000 arducam
-        // Set the resolution and frames per second
+        final UsbCamera camera = CameraServer.startAutomaticCapture(camId);
         camera.setResolution(cameraW, cameraH);
-        camera.setFPS(121); // 30 max for lifecam
+        camera.setFPS(cameraFPS); // 30 max for lifecam
         camera.setExposureAuto();
-
-        // CvSource outputStream = CameraServer.putVideo("Detected", cameraW, cameraH);
         
         // Get a CvSink. This will capture Mats from the camera
         JavaCvSink cvSink = new JavaCvSink("sink1"); //CameraServer.getVideo();
         cvSink.setSource(camera);
         // Mats are very memory expensive. Lets reuse these.
-        Mat image = new Mat();
-        var grayMat = new Mat();
+        final Mat image = new Mat();
+        final Mat grayMat = new Mat();
         ///
     
         List<Mat> allCharucoCorners = new ArrayList<>();
@@ -149,22 +145,21 @@ public class Program {
             continue; // skip the rest of the current iteration
           }
 
-          Mat imageCopy = new Mat();
+          final Mat imageCopy = new Mat();
           image.copyTo(imageCopy);
           
-          boolean monochrome = false;
-    
-          if(monochrome)
-            Core.extractChannel(image, grayMat, 0); // monochrome camera on 3 channels to 1 gray channel
-          else
-            Imgproc.cvtColor(image, grayMat, Imgproc.COLOR_RGB2GRAY); // color camera to  1 gray channel
+          // boolean monochrome = false; // commented out since it doesn't seem to add much to the program
+          // if(monochrome)
+          //   Core.extractChannel(image, grayMat, 0); // monochrome camera on 3 channels to 1 gray channel
+          // else
+            Imgproc.cvtColor(image, grayMat, Imgproc.COLOR_RGB2GRAY); // 3 channel color to 1 gray channel
     
           // System.out.println("image\n" + image);
     
-          Mat currentCharucoCorners = new Mat();
-          Mat currentCharucoIds = new Mat();
-          Mat currentObjectPoints = new Mat();
-          Mat currentImagePoints = new Mat();
+          final Mat currentCharucoCorners = new Mat();
+          final Mat currentCharucoIds = new Mat();
+          final Mat currentObjectPoints = new Mat();
+          final Mat currentImagePoints = new Mat();
           detector.detectBoard( image, currentCharucoCorners, currentCharucoIds );
     
           // if(printCount++ == 10)
@@ -181,31 +176,29 @@ public class Program {
             //                 currentCharucoIds.rows(), currentCharucoIds.cols(), currentCharucoIds.channels(),
             //                 currentCharucoIds.depth(), currentCharucoIds.dims(), currentCharucoIds.height(),
             //                 currentCharucoIds.width(), currentCharucoIds.total() );
-    //currentCharucoCorners Mat [ 52*1*CV_32FC2, isCont=true, isSubmat=false, nativeObj=0x2dcf9573a80, dataAddr=0x2dcf95db4c0 ]
-    // rows 52, cols 1, channels 2, depth 5, dims 2, height 52, width 1, total 52
-    //currentCharucoIds Mat [ 52*1*CV_32SC1, isCont=true, isSubmat=false, nativeObj=0x2dcf9573460, dataAddr=0x2dcfe563c40 ]
-    // rows 52, cols 1, channels 1, depth 4, dims 2, height 52, width 1, total 52
+            //currentCharucoCorners Mat [ 52*1*CV_32FC2, isCont=true, isSubmat=false, nativeObj=0x2dcf9573a80, dataAddr=0x2dcf95db4c0 ]
+            // rows 52, cols 1, channels 2, depth 5, dims 2, height 52, width 1, total 52
+            //currentCharucoIds Mat [ 52*1*CV_32SC1, isCont=true, isSubmat=false, nativeObj=0x2dcf9573460, dataAddr=0x2dcfe563c40 ]
+            // rows 52, cols 1, channels 1, depth 4, dims 2, height 52, width 1, total 52
           // }
        
           Objdetect.drawDetectedCornersCharuco(imageCopy, currentCharucoCorners, currentCharucoIds);
     
           Imgproc.putText(imageCopy, "Press 'c' to add; 'Esc' to finish",
-          new Point(10, 20), Imgproc.FONT_HERSHEY_SIMPLEX, 0.5, new Scalar(0, 0, 0), 2);
+          new Point(10, 20), Imgproc.FONT_HERSHEY_SIMPLEX, 0.5, new Scalar(0, 0, 0), 3);
           Imgproc.putText(imageCopy, "Press 'c' to add; 'Esc' to finish",
-          new Point(10, 20), Imgproc.FONT_HERSHEY_SIMPLEX, 0.5, new Scalar(0, 255, 255), 1);
+          new Point(10, 20), Imgproc.FONT_HERSHEY_SIMPLEX, 0.5, new Scalar(255, 255, 255), 1);
     
-          // HighGui.imshow("ChArUcoBoard", boardImage);
-          HighGui.imshow("out", imageCopy);
+          HighGui.imshow("camera view", imageCopy);
           int key = HighGui.waitKey(waitTime); // wait so not beating on computer
     
-          if (key == 27) break; // stop capture and do the calibration
+          if (key == 27) break; // 'Esc' key pressed to stop capture and do the calibration
     
           // 'c' key pressed to capture view
           if(key == 67 && currentCharucoIds.total() >= 4) { // minimum number of points in view to be useful
-    
             System.out.println("\nCapture attempt with " + currentCharucoCorners.total() + " corners");
     
-            List<Mat> listCurrentCharucoCorners = new ArrayList<>();
+            final List<Mat> listCurrentCharucoCorners = new ArrayList<>();
             for(int i = 0; i < currentCharucoCorners.total(); i++) {
               listCurrentCharucoCorners.add(currentCharucoCorners.row(i));
             }
@@ -240,26 +233,20 @@ public class Program {
           } // end this image capture
         } // end video captures
           
-        // HAVE THE DATA SO CALIBRATE CAMERA
-        if(allObjectPoints.size() < 6 || allImagePoints.size() < 6) // need at least 6 views for calibrateCamera DLT algorithm
-        {
-          System.out.println("Need at least 6 views; try again from the beginning.");
-          System.exit(1);
-        }
-
+        /// HAVE THE DATA SO CALIBRATE CAMERA
         System.out.println("(slowly) CALIBRATING CAMERA");
         System.out.println(image.cols() + "x" + image.rows());
         System.out.flush();
-        Mat cameraMatrix;
-        Mat distCoeffs = new Mat();
-        List<Mat> rvecs = new ArrayList<>();
-        List<Mat> tvecs = new ArrayList<>();
+        final Mat cameraMatrix;
+        final Mat distCoeffs = new Mat();
+        final List<Mat> rvecs = new ArrayList<>();
+        final List<Mat> tvecs = new ArrayList<>();
 
         // if(calibrationFlags & CALIB_FIX_ASPECT_RATIO) {
         cameraMatrix = Mat.eye(3, 3, CvType.CV_64F);
           // cameraMatrix.at<double>(0, 0) = aspectRatio;
         // }
-        double repError = Calib3d.calibrateCamera(allObjectPoints, allImagePoints, imgSize, cameraMatrix, distCoeffs, rvecs, tvecs );
+        final double repError = Calib3d.calibrateCamera(allObjectPoints, allImagePoints, imgSize, cameraMatrix, distCoeffs, rvecs, tvecs );
 
         System.out.println("camera matrix " + cameraMatrix + "\n" + cameraMatrix.dump());
         System.out.println("distortion coefficients " + distCoeffs + "\n" + distCoeffs.dump());
@@ -274,7 +261,9 @@ public class Program {
 
 // BUILD SUCCESSFUL in 6s
 // 8 actionable tasks: 3 executed, 5 up-to-date
+
 // PS C:\Users\RKT\frc\FRC2023\Code\Java> java -jar build\libs\TestApplication-winx64.jar
+
 // CS: USB Camera 1: Connecting to USB camera on \\?\ usb#vid_0c45&pid_6366&mi_00#8&2355927a&2&0000#{e5323777-f976-4f5b-9b55-b94699c46e44}\global
 // CS: USB Camera 1: Disconnected from \\?\ usb#vid_0c45&pid_6366&mi_00#8&2355927a&2&0000#{e5323777-f976-4f5b-9b55-b94699c46e44}\global
 // CS: USB Camera 1: Connecting to USB camera on \\?\ usb#vid_0c45&pid_6366&mi_00#8&2355927a&2&0000#{e5323777-f976-4f5b-9b55-b94699c46e44}\global
@@ -324,12 +313,23 @@ public class Program {
 // [0.5171960321534104, -5.745370954625806, -0.003966015723441144, 0.003863082859973825, 20.16955092184625]
 // repError 0.3952622420671669
 
+// 320x240 ArduCam UC-844
+// camera matrix Mat [ 3*3*CV_64FC1, isCont=true, isSubmat=false, nativeObj=0x2286eb75220, dataAddr=0x2286e7a6640 ]
+// [279.8961306475453, 0, 146.969278618183;
+//  0, 280.021540902427, 124.0950171664443;
+//  0, 0, 1]
+// distortion coefficients Mat [ 1*5*CV_64FC1, isCont=true, isSubmat=false, nativeObj=0x2286eb75680, dataAddr=0x2286e404e40 ]
+// [0.1851811005470358, -0.958278941570755, -0.0005648335497734221, 0.00307233198514575, 1.739875790378657]
+// repError 0.7643240664752609
+
 /*
 System.out.println(dictionary.get_bytesList().total());
 System.out.println(dictionary.get_bytesList() + "\n" + dictionary.get_bytesList().dump());
 System.out.println(Dictionary.getBitsFromByteList(dictionary.get_bytesList().row(0), 5).dump());
 */
+
 /*
+// from the OpenCV program for debugging display all the points found
 void drawDetectedCornersCharuco(InputOutputArray _image, InputArray _charucoCorners,
                                 InputArray _charucoIds, Scalar cornerColor) {
     CV_Assert(!_image.getMat().empty() &&
