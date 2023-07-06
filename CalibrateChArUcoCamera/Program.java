@@ -1,6 +1,15 @@
-// Based on https://github.com/wpilibsuite/StandaloneAppSamples/tree/main/Java
+// https://docs.opencv.org/4.8.0/da/d13/tutorial_aruco_calibration.html
+
+// almost complete conversion of the openCV sample program to calibrate a camera
+// using the ChArUco Board
+
+// C:\Users\RKT\frc\FRC2023\opencv_contrib-4.x\modules\aruco\samples\calibrate_camera_charuco.cpp
+// or calibrate_camera.cpp OpenCV 4.8.0 (and up I would hope)
+
+// works on Windows 10 using OpenCV version 4.8.0
+
+// For the camera server based on https://github.com/wpilibsuite/StandaloneAppSamples/tree/main/Java
 // and JavaCvSink.java from WPILib ShuffleBoard
-// and OpenCV 4.8.0 (and up I would hope)
 
 // in a terminal window compile and run the program
 // first SAVE the files because there is no auto save in the gradlew.bat
@@ -353,3 +362,19 @@ void drawDetectedCornersCharuco(InputOutputArray _image, InputArray _charucoCorn
     }
 }
  */
+
+// using opencv image input instead of WPILib camera server
+//     System.loadLibrary("opencv_videoio_ffmpeg480_64"); required maybe. dll must be in PATH
+//     VideoCapture cap = new VideoCapture(); required
+    // video parameters
+    // MatOfInt videoParams = new MatOfInt( // pair-wise; param1, value1, ...
+    //   Videoio.CAP_PROP_AUTO_EXPOSURE, 1,
+    //       Videoio.CAP_PROP_FPS, 100,
+    //       Videoio.CAP_PROP_FRAME_HEIGHT, 240,
+    //       Videoio.CAP_PROP_FRAME_WIDTH, 320 );
+    // cap.open(camId/*, Videoio.CAP_ANY, videoParams*/);
+    // cap.set(Videoio.CAP_PROP_FORMAT, CvType.CV_8UC(3));
+//    cap.open("http://127.0.0.1:1181/stream.mjpg"); required
+	  //    cap.open("http://127.0.0.1:1181/stream.mjpg", Videoio.CAP_FFMPEG);
+    // System.out.println(cap.set(Videoio.CAP_PROP_FOURCC, VideoWriter.fourcc('M','J','P','G')));
+//    if (cap.isOpened()) cap.read(image); required
