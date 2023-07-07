@@ -34,6 +34,7 @@ import java.util.List;
 
 import org.opencv.calib3d.Calib3d;
 import org.opencv.core.Core;
+import org.opencv.core.CvException;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfInt;
@@ -60,6 +61,7 @@ import edu.wpi.first.util.CombinedRuntimeLoader;
 import edu.wpi.first.util.WPIUtilJNI;
 
 public class Program {
+
   /// USER CONFIGURATION
         static final boolean writeBoard = false; // make a ChArUco Board image in a jpg to print
         // print the board then measure it carefully; put those measurements below and rerun to calibrate
@@ -133,7 +135,7 @@ public class Program {
         camera.setResolution(cameraW, cameraH);
         camera.setFPS(cameraFPS); // 30 max for lifecam
         camera.setExposureAuto();
-        
+           
         // Get a CvSink. This will capture Mats from the camera
         JavaCvSink cvSink = new JavaCvSink("sink1"); //CameraServer.getVideo();
         cvSink.setSource(camera);
@@ -174,7 +176,6 @@ public class Program {
           // if(printCount++ == 10)
           // {
             // printCount = 0;
-            // System.out.println("."); // for the riolog to print a "blank" line
             // System.out.format("%s %s%n rows %d, cols %d, channels %d, depth %d, dims %d, height %d, width %d, total %d%n",
             //                 "currentCharucoCorners", currentCharucoCorners,
             //                 currentCharucoCorners.rows(), currentCharucoCorners.cols(), currentCharucoCorners.channels(),
@@ -194,9 +195,9 @@ public class Program {
           Objdetect.drawDetectedCornersCharuco(imageCopy, currentCharucoCorners, currentCharucoIds);
     
           Imgproc.putText(imageCopy, "Press 'c' to add; 'Esc' to finish",
-          new Point(10, 20), Imgproc.FONT_HERSHEY_SIMPLEX, 0.5, new Scalar(0, 0, 0), 3);
+          new Point(2, 13), Imgproc.FONT_HERSHEY_SIMPLEX, 0.5, new Scalar(0, 0, 0), 3);
           Imgproc.putText(imageCopy, "Press 'c' to add; 'Esc' to finish",
-          new Point(10, 20), Imgproc.FONT_HERSHEY_SIMPLEX, 0.5, new Scalar(255, 255, 255), 1);
+          new Point(2, 13), Imgproc.FONT_HERSHEY_SIMPLEX, 0.5, new Scalar(255, 255, 255), 1);
     
           HighGui.imshow("camera view", imageCopy);
           int key = HighGui.waitKey(waitTime); // wait so not beating on computer
@@ -204,12 +205,13 @@ public class Program {
           if (key == 27) break; // 'Esc' key pressed to stop capture and do the calibration
     
           // 'c' key pressed to capture view
-          if(key == 67 && currentCharucoIds.total() >= 4) { // minimum number of points in view to be useful
+          if(key == 67 && currentCharucoIds.total() >= 6) { // minimum number of points in view to be useful almost all the time
+                                                            // opencv checks for 4 or 6 object points in different places
             System.out.println("\nCapture attempt with " + currentCharucoCorners.total() + " corners");
     
             final List<Mat> listCurrentCharucoCorners = new ArrayList<>();
             for(int i = 0; i < currentCharucoCorners.total(); i++) {
-              listCurrentCharucoCorners.add(currentCharucoCorners.row(i));
+              listCurrentCharucoCorners.add(currentCharucoCorners.row(i)); // reformat the Mat for matchImagePoints
             }
     
             board.matchImagePoints(listCurrentCharucoCorners, currentCharucoIds,
@@ -226,26 +228,27 @@ public class Program {
             // currentImagePoints.depth(), currentImagePoints.dims(), currentImagePoints.height(),
             // currentImagePoints.width(), currentImagePoints.total() );
     
-            if(currentImagePoints.empty() || currentObjectPoints.empty()) {
+            if(currentObjectPoints.empty() || currentImagePoints.empty()) {
                 System.out.println("Point matching failed; skipping this frame.");
                 continue;
             }
             // allCharucoCorners.add(currentCharucoCorners);
             // allCharucoIds.add(currentCharucoIds);
-            allImagePoints.add(currentImagePoints);
             allObjectPoints.add(currentObjectPoints);
+            allImagePoints.add(currentImagePoints);
             // allImages.add(image);
             // imageSize = image.size();
     
-            System.out.println(allImagePoints.size() + " frames captured");
+            System.out.println(allObjectPoints.size() + " frames captured");
     
           } // end this image capture
         } // end video captures
           
         /// HAVE THE DATA SO CALIBRATE CAMERA
         System.out.println("(slowly) CALIBRATING CAMERA");
+        System.out.println(camera.getDescription());
         System.out.println(image.cols() + "x" + image.rows());
-        System.out.flush();
+        System.out.flush(); // assure message appears that calibration has begun
         final Mat cameraMatrix;
         final Mat distCoeffs = new Mat();
         final List<Mat> rvecs = new ArrayList<>();
@@ -255,23 +258,38 @@ public class Program {
         cameraMatrix = Mat.eye(3, 3, CvType.CV_64F);
           // cameraMatrix.at<double>(0, 0) = aspectRatio;
         // }
-        final double repError = Calib3d.calibrateCamera(allObjectPoints, allImagePoints, imgSize, cameraMatrix, distCoeffs, rvecs, tvecs );
 
-        System.out.println("camera matrix " + cameraMatrix + "\n" + cameraMatrix.dump());
-        System.out.println("distortion coefficients " + distCoeffs + "\n" + distCoeffs.dump());
+        try
+        {
+          final double repError = Calib3d.calibrateCamera(allObjectPoints, allImagePoints, imgSize, cameraMatrix, distCoeffs, rvecs, tvecs );
+          System.out.println("camera matrix " + cameraMatrix + "\n" + cameraMatrix.dump());
+          System.out.println("distortion coefficients " + distCoeffs + "\n" + distCoeffs.dump());
+          System.out.println("repError " + repError);      
+        }
+        catch(CvException error)
+        {
+          System.out.println(error);
+          
+          if(error.toString().contains("DBL_EPSILON"))
+          {
+            System.out.println("\nPossibly had too many frames. Try < 190 frames.");
+          }
 
-        System.out.println("repError " + repError);
+          if(error.toString().contains("nimages > 0"))
+          {
+            System.out.println("\nNo frames. Try again and press 'c' to add frames.");
+          }
+        }
 
         System.exit(0);
     }
 }
-
-// PS C:\Users\RKT\frc\FRC2023\Code\Java> .\gradlew shadowJar
+// C:\Users\RKT\frc\FRC2023\Code\Java> .\gradlew shadowJar
 
 // BUILD SUCCESSFUL in 6s
 // 8 actionable tasks: 3 executed, 5 up-to-date
 
-// PS C:\Users\RKT\frc\FRC2023\Code\Java> java -jar build\libs\TestApplication-winx64.jar
+// C:\Users\RKT\frc\FRC2023\Code\Java> java -jar build\libs\TestApplication-winx64.jar
 
 // CS: USB Camera 1: Connecting to USB camera on \\?\ usb#vid_0c45&pid_6366&mi_00#8&2355927a&2&0000#{e5323777-f976-4f5b-9b55-b94699c46e44}\global
 // CS: USB Camera 1: Disconnected from \\?\ usb#vid_0c45&pid_6366&mi_00#8&2355927a&2&0000#{e5323777-f976-4f5b-9b55-b94699c46e44}\global
@@ -282,54 +300,20 @@ public class Program {
 
 // Capture attempt with 17 corners
 // 1 frames captured
-
-// Capture attempt with 12 corners
-// 2 frames captured
-
-// Capture attempt with 7 corners
-// 3 frames captured
-
-// Capture attempt with 11 corners
-// 4 frames captured
-
-// Capture attempt with 7 corners
-// 5 frames captured
-
-// Capture attempt with 5 corners
-// 6 frames captured
-
-// Capture attempt with 4 corners
-// 7 frames captured
-
-// Capture attempt with 5 corners
-// 8 frames captured
-
-// Capture attempt with 36 corners
-// 9 frames captured
-
-// Capture attempt with 16 corners
-// 10 frames captured
-
-// Capture attempt with 13 corners
-// 11 frames captured
+// .
+// .
+// .
+// 114 frames captured
 // (slowly) CALIBRATING CAMERA
+// Arducam OV9281 USB Camera (1)
 // 320x240
-// camera matrix Mat [ 3*3*CV_64FC1, isCont=true, isSubmat=false, nativeObj=0x2642a7eb6f0, dataAddr=0x2642a7f0dc0 ]
-// [277.8609536766253, 0, 152.9657491150284;
-//  0, 277.2565407471934, 117.7440061323202;
+// camera matrix Mat [ 3*3*CV_64FC1, isCont=true, isSubmat=false, nativeObj=0x1a66b813900, dataAddr=0x1a66e5c53c0 ]
+// [229.6626080788598, 0, 164.8030509174101;
+//  0, 228.18269360966, 114.3647984489618;
 //  0, 0, 1]
-// distortion coefficients Mat [ 1*5*CV_64FC1, isCont=true, isSubmat=false, nativeObj=0x2642a7eb5a0, dataAddr=0x2642a623200 ]
-// [0.5171960321534104, -5.745370954625806, -0.003966015723441144, 0.003863082859973825, 20.16955092184625]
-// repError 0.3952622420671669
-
-// 320x240 ArduCam UC-844
-// camera matrix Mat [ 3*3*CV_64FC1, isCont=true, isSubmat=false, nativeObj=0x2286eb75220, dataAddr=0x2286e7a6640 ]
-// [279.8961306475453, 0, 146.969278618183;
-//  0, 280.021540902427, 124.0950171664443;
-//  0, 0, 1]
-// distortion coefficients Mat [ 1*5*CV_64FC1, isCont=true, isSubmat=false, nativeObj=0x2286eb75680, dataAddr=0x2286e404e40 ]
-// [0.1851811005470358, -0.958278941570755, -0.0005648335497734221, 0.00307233198514575, 1.739875790378657]
-// repError 0.7643240664752609
+// distortion coefficients Mat [ 1*5*CV_64FC1, isCont=true, isSubmat=false, nativeObj=0x1a66b813ba0, dataAddr=0x1a66c32fb40 ]
+// [-0.09066001489984649, 0.203254195450917, -0.00932087456854446, 0.007449679350668339, -0.2048258601718673]
+// repError 3.288901566607536
 
 /*
 System.out.println(dictionary.get_bytesList().total());
