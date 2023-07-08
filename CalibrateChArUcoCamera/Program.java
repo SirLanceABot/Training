@@ -78,7 +78,7 @@ public class Program {
         // System.loadLibrary("opencv_videoio_ffmpeg480_64");
       }
 
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) throws IOException, InterruptedException {
 
         NetworkTablesJNI.Helper.setExtractOnStaticLoad(false);
         WPIUtilJNI.Helper.setExtractOnStaticLoad(false);
@@ -125,7 +125,7 @@ public class Program {
         CharucoDetector detector = new CharucoDetector(board, charucoParams, detectParams, refineParams);
         ///
 
-        final int waitTime = 30;
+        final int waitTime = 1000;
         final Size imgSize = new Size(cameraW, cameraH);
 
         /// video image capture
@@ -200,15 +200,22 @@ public class Program {
           new Point(2, 13), Imgproc.FONT_HERSHEY_SIMPLEX, 0.5, new Scalar(255, 255, 255), 1);
     
           HighGui.imshow("camera view", imageCopy);
-          int key = HighGui.waitKey(waitTime); // wait so not beating on computer
-    
+          if(currentCharucoIds.total() < 6) // not minimum number of points in view to be useful almost all the time
+          {                                 // opencv checks for 4 or 6 object points in different places
+            int key = HighGui.waitKey(30); // wait so not beating on computer and accept the Esc key
+            if (key == 27) break; // 'Esc' key pressed to stop capture and do the calibration
+            continue;
+          }
+
+          int key = HighGui.waitKey(waitTime); // wait so user has chance to review image and hit key
+ 
           if (key == 27) break; // 'Esc' key pressed to stop capture and do the calibration
     
           // 'c' key pressed to capture view
-          if(key == 67 && currentCharucoIds.total() >= 6) { // minimum number of points in view to be useful almost all the time
-                                                            // opencv checks for 4 or 6 object points in different places
+          if(key == 67) {
+                                                            
             System.out.println("\nCapture attempt with " + currentCharucoCorners.total() + " corners");
-    
+
             final List<Mat> listCurrentCharucoCorners = new ArrayList<>();
             for(int i = 0; i < currentCharucoCorners.total(); i++) {
               listCurrentCharucoCorners.add(currentCharucoCorners.row(i)); // reformat the Mat for matchImagePoints
@@ -240,6 +247,8 @@ public class Program {
             // imageSize = image.size();
     
             System.out.println(allObjectPoints.size() + " frames captured");
+
+            Thread.sleep(50); // wait a little to keep showing previous image - it feels better
     
           } // end this image capture
         } // end video captures
@@ -261,10 +270,82 @@ public class Program {
 
         try
         {
-          final double repError = Calib3d.calibrateCamera(allObjectPoints, allImagePoints, imgSize, cameraMatrix, distCoeffs, rvecs, tvecs );
+          double repError = Calib3d.calibrateCamera(
+            allObjectPoints, allImagePoints, imgSize, cameraMatrix, distCoeffs, rvecs, tvecs );
+
           System.out.println("camera matrix " + cameraMatrix + "\n" + cameraMatrix.dump());
           System.out.println("distortion coefficients " + distCoeffs + "\n" + distCoeffs.dump());
-          System.out.println("repError " + repError);      
+          System.out.println("repError " + repError);
+
+          /// look for similar views that might have skewed the results and get rid of them
+          // Typically clustering is in part to get rid of out-liers. In this case we don't want
+          // the duplicates and want the out-liers.
+          // If there were too many duplicates this will eliminate them but the results typically
+          // are still not that good. Best to rerun and be careful to get a complete view of the
+          // board and without duplicates.
+
+          // for(int i = 0; i < rvecs.size(); i++)
+            // System.out.format("%d%n%s%n%s%n", i, rvecs.get(i).dump(), tvecs.get(i).dump());
+
+                int NUM_POINTS = rvecs.size(); // assume tvecs is the same size - it should be the number of views captured
+
+                if(NUM_POINTS == 0) System.exit(2);
+            
+                int NUM_DIM = rvecs.get(0).rows() + tvecs.get(0).rows(); // better be 3 + 3 for all points or it's messed up badly
+                System.out.println("number of dimension " + NUM_DIM);
+
+                data_point[] point = new data_point[NUM_POINTS];
+            
+                for(int i = 0; i < NUM_POINTS; i++)
+                {
+                  point[i] = new data_point(NUM_DIM);
+                  double[] rvec = new double[3];
+                  double[] tvec = new double[3];
+                  rvecs.get(i).get(0, 0, rvec);
+                  tvecs.get(i).get(0, 0, tvec);
+                  point[i].dimData[0] = (float)rvec[0];
+                  point[i].dimData[1] = (float)rvec[1];
+                  point[i].dimData[2] = (float)rvec[2];
+                  point[i].dimData[3] = (float)tvec[0];
+                  point[i].dimData[4] = (float)tvec[1];
+                  point[i].dimData[5] = (float)tvec[2];
+                }
+                
+                int num_clusters;
+                float beta = .94f; // required similarity of poses to consider a cluster
+                float gamma = 0.0f; // fraction of number of points
+                // .7 similarity is a good first guess for somewhat similar and .9 for very similar
+                //  0. for fraction of num points that must be neighbors to be a hub for no outliers
+                // .05 is good first guess if outliers not to be considered as hubs
+                num_clusters = EntropyCluster.cluster( point, NUM_DIM, NUM_POINTS, beta, gamma );
+
+                System.out.println("number of hubs " + num_clusters);
+                for(int i = 0; i <  NUM_POINTS; i++)
+                {
+                  System.out.println(point[i]);
+                }
+
+                List<Mat> allImagePointsFiltered = new ArrayList<>();
+                List<Mat> allObjectPointsFiltered = new ArrayList<>();
+
+                // go through all the points and put the hubs in the filtered list
+                for(int i = 0; i < NUM_POINTS; i++)
+                {
+                  if(i == point[i].hub) // if this point is the hub of its cluster, then keep it
+                  {
+                    allObjectPointsFiltered.add(allObjectPoints.get(i));
+                    allImagePointsFiltered.add(allImagePoints.get(i));
+                  }
+                }
+                System.out.println("filtered " + allObjectPointsFiltered.size() + " " + allImagePointsFiltered.size());
+
+                repError = Calib3d.calibrateCamera(
+                  allObjectPointsFiltered, allImagePointsFiltered, imgSize, cameraMatrix, distCoeffs, rvecs, tvecs );
+      
+                System.out.println("camera matrix " + cameraMatrix + "\n" + cameraMatrix.dump());
+                System.out.println("distortion coefficients " + distCoeffs + "\n" + distCoeffs.dump());
+                System.out.println("repError " + repError);
+          /// end look for similar views
         }
         catch(CvException error)
         {
@@ -315,6 +396,42 @@ public class Program {
 // [-0.09066001489984649, 0.203254195450917, -0.00932087456854446, 0.007449679350668339, -0.2048258601718673]
 // repError 3.288901566607536
 
+// 158 frames captured
+// (slowly) CALIBRATING CAMERA
+// Arducam OV9281 USB Camera (1)
+// 320x240
+// camera matrix Mat [ 3*3*CV_64FC1, isCont=true, isSubmat=false, nativeObj=0x283d19cda20, dataAddr=0x283d178bec0 ]
+// [2192.222626638505, 0, 158.2939963033187;
+//  0, 3817.1848619556, 97.22493749165129;
+//  0, 0, 1]
+// distortion coefficients Mat [ 1*5*CV_64FC1, isCont=true, isSubmat=false, nativeObj=0x283d19cc8a0, dataAddr=0x283d4a0a8c0 ]
+// [4.766421866222886, -244.0182073158604, -0.05658295270067953, 0.1636478251254295, -975.6841692316784]
+// repError 1.6069469897480628
+
+// 73 frames captured
+// (slowly) CALIBRATING CAMERA
+// Arducam OV9281 USB Camera (1)
+// 320x240
+// camera matrix Mat [ 3*3*CV_64FC1, isCont=true, isSubmat=false, nativeObj=0x17fb8e4bf50, dataAddr=0x17fbc574940 ]
+// [262.3625956344302, 0, 143.1668020731382;
+//  0, 266.9098219120432, 130.1605324323735;
+//  0, 0, 1]
+// distortion coefficients Mat [ 1*5*CV_64FC1, isCont=true, isSubmat=false, nativeObj=0x17fb8e4be00, dataAddr=0x17fbbbe93c0 ]
+// [-0.03667092969367813, 0.09698771569209549, 0.003697959710534216, 0.003773422311724747, -0.1108149233510407]
+// repError 0.4869104211371649
+
+// 20 frames captured
+// (slowly) CALIBRATING CAMERA
+// Arducam OV9281 USB Camera (1)
+// 320x240
+// camera matrix Mat [ 3*3*CV_64FC1, isCont=true, isSubmat=false, nativeObj=0x1cd28dc6880, dataAddr=0x1cd28d446c0 ]
+// [273.4228695437403, 0, 145.7386299032018;
+//  0, 274.3216850676515, 124.4214043065032;
+//  0, 0, 1]
+// distortion coefficients Mat [ 1*5*CV_64FC1, isCont=true, isSubmat=false, nativeObj=0x1cd28dc7610, dataAddr=0x1cd25cf0440 ]
+// [0.0784569904015452, -0.2228623823880342, 0.002313757736825509, -0.002352928864210518, 0.2985419246813718]
+// repError 0.5106204275049745
+
 /*
 System.out.println(dictionary.get_bytesList().total());
 System.out.println(dictionary.get_bytesList() + "\n" + dictionary.get_bytesList().dump());
@@ -362,3 +479,62 @@ void drawDetectedCornersCharuco(InputOutputArray _image, InputArray _charucoCorn
 	  //    cap.open("http://127.0.0.1:1181/stream.mjpg", Videoio.CAP_FFMPEG);
     // System.out.println(cap.set(Videoio.CAP_PROP_FOURCC, VideoWriter.fourcc('M','J','P','G')));
 //    if (cap.isOpened()) cap.read(image); required
+
+// https://www.chiefdelphi.com/t/photonvision-beta-3d-calibration-lags-on-limelight-camera/416986/12
+// You want to get images of the chessboard to collectively cover most of the FOV as well as the
+// chessboard with minor tilt if possible (not completely parallel to the camera).
+
+// don't capture too many frames and don't repeat views as that seems to skew the results a lot. Move
+// around the edges pointing at the target. Don't do more than a couple straight-on at the middle of
+// the board.
+/*
+0
+[-0.3843782727972536;
+ 0.04665637528558304;
+ 0.1256835215511318]
+[-0.1256348364895211;
+ -0.09259992384170322;
+ 0.2555600760374292]
+1
+[-0.2102855433927293;
+ 0.6665324808261487;
+ -0.03547535618272864]
+[-0.1478460327706186;
+ -0.08506969926601067;
+ 0.4453159871857921]
+2
+[0.3275238551113911;
+ -0.5853019684024241;
+ 0.06578745292065756]
+[-0.0590084311095838;
+ -0.04216345804226997;
+ 0.2547831637409428]
+3
+[0.7352132442260926;
+ 0.1555128915429818;
+ -0.1096949392600692]
+[-0.07858152262851925;
+ 0.0263682591785688;
+ 0.255822268323756]
+4
+[0.1062213612216823;
+ 0.1403091719592303;
+ -0.02873230273053752]
+[-0.1026053260285888;
+ -0.070107764740395;
+ 0.2158616334205405]
+5
+[0.1165489600216269;
+ 0.1459851891036928;
+ -0.02243723416446729]
+[-0.1005445623609558;
+ -0.0723663210007498;
+ 0.2160089068333739]
+6
+[0.1169066120183521;
+ 0.1480066010435835;
+ -0.02156727797783599]
+[-0.100431131800067;
+ -0.07281524792898098;
+ 0.2180031762482469]
+ */
