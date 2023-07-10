@@ -62,7 +62,14 @@ import edu.wpi.first.wpilibj.TimedRobot;
  * The latency of acquiring the image from the camera mostly depends on the fps setting
  * of the camera, the shutter is global or where the object is if progressive scan.
  * Timing starts before the frame grab statement and that appears to account for much
- * of the camera latency at least for the LifeCam. 
+ * of the camera latency at least for the LifeCam.
+ * 
+ * The camera view is displayed with additional information of latency and the AprilTag pose to camera.
+ * That display is optional and a tiny bit of cpu processing can be saved by not doing it.
+ * Since AprilTag view can be in normal light that camera can also be used by the operator if it's
+ * pointing in a good direction. If the operator doesn't need that view, don't display it and
+ * the image can be made a little darker and more contrast - whatever can reduce the cpu
+ * processing time for an image. Experiment with exposure, contrast, gamma, brightness, etc.
  */
 public class Robot extends TimedRobot {
   
@@ -70,6 +77,9 @@ public class Robot extends TimedRobot {
     System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
 }
 
+  // the roboRIO won't handle more resolution than 320x240 (not enough cpu).
+  // Calibrate the camera at the used resolution or scale Fx,Fy,Cx,Cy proportional
+  // to what resolution was used for camera calibration.
   int cameraW = 320;
   int cameraH = 240;
   public Image image = new Image(); // where a video frame goes for others to use
@@ -134,8 +144,8 @@ public class Robot extends TimedRobot {
     
     // Get the UsbCamera from CameraServer
     // /dev/v4l/by-id/usb-Arducam_Technology_Co.__Ltd._Arducam_OV9281_USB_Camera_UC762-video-index0
-    UsbCamera camera = CameraServer.startAutomaticCapture(
-          /*"myCam", "/dev/v4l/by-id/usb-Arducam_Technology_Co.__Ltd._Arducam_OV9281_USB_Camera_UC762-video-index0"*/);
+    UsbCamera camera = CameraServer.startAutomaticCapture(); // http://10.42.37.2:1181/   http://roborio-4237-frc.local:1181/?action=stream
+          //"myCam", "/dev/v4l/by-id/usb-Arducam_Technology_Co.__Ltd._Arducam_OV9281_USB_Camera_UC762-video-index0"
     // Set the resolution and frames per second
     camera.setResolution(cameraW, cameraH);
     camera.setFPS(100); // 30 for lifecam 100 for arducam
@@ -164,9 +174,9 @@ public class Robot extends TimedRobot {
         continue;
       }
 
-      Imgproc.cvtColor(mat, grayMat, Imgproc.COLOR_RGB2GRAY); // color camera to  1 gray channel
+      Imgproc.cvtColor(mat, grayMat, Imgproc.COLOR_BGR2GRAY); // color camera 3 channels to 1 gray channel
    
-      // Core.extractChannel(mat, grayMat, 0); // monochrome camera on 3 channels to 1 gray channel
+      // Core.extractChannel(mat, grayMat, 0); // monochrome camera on 3 channels to 1 gray channel (isn't significantly better than above) 
 
       AprilTagDetection[] detections = detector.detect(grayMat);
 
@@ -201,7 +211,7 @@ public class Robot extends TimedRobot {
     int latencyDisplay = 0;
 
     // Setup a CvSource. This will send images back to the Dashboard
-    CvSource outputStream = CameraServer.putVideo("Detected", cameraW, cameraH);
+    CvSource outputStream = CameraServer.putVideo("Detected", cameraW, cameraH); // http://10.42.37.2:1182/  http://roborio-4237-frc.local:1182/?action=stream
 
     // theoretically the resolution factor also directly effects the other camera parameters
     // but apparently recalibrating at various resolutions does yield slightly varying results.
@@ -222,6 +232,7 @@ public class Robot extends TimedRobot {
     // [273.8682279422785, 0, 142.187975375679;
     //  0, 274.2578211409246, 124.6151823259089;
     //  0, 0, 1]
+    // rough calibration - wasn't done with a nice flat board
     double cameraFx = 273.8682279422785;
     double cameraFy = 274.2578211409246;
     double cameraCx = 142.187975375679;
@@ -229,7 +240,9 @@ public class Robot extends TimedRobot {
     // distortion coefficients Mat [ 1*5*CV_64FC1, isCont=true, isSubmat=false, nativeObj=0x1f04d2ed520, dataAddr=0x1f04d38da80 ]
     // [0.03872533667096114, -0.2121025605447465, 0.00334472765894009, -0.006080540135581289, 0.4001779842036727]
     MatOfDouble distCoeffs = new MatOfDouble(
-      0.03872533667096114, -0.2121025605447465, 0.00334472765894009, -0.006080540135581289, 0.4001779842036727);
+      // much of the bit of distortion from calibration was actually the board not being smooth so don't bother using the distortion
+      // 0.03872533667096114, -0.2121025605447465, 0.00334472765894009, -0.006080540135581289, 0.4001779842036727
+      );
 ///////////////////////////
     double tagSize = 0.1524; // meters of the targeted AprilTag
 
@@ -331,6 +344,9 @@ public class Robot extends TimedRobot {
               new Point3(1.*tagSize/2., -1.*tagSize/2., -0.7*tagSize),
               new Point3(-1.*tagSize/2., -1.*tagSize/2., -0.7*tagSize));
 
+        // The opencv rvec is a rotation vector with three elements representing the axis scaled by
+        // the angle in the EDN coordinate system. (angle = norm, and axis = rvec / norm).
+        // This is not the same 3 elements of the 3 rotations for the 3 axes that may be used in WPILib Rotation3D.
         double[] rotationVector = tagFacingCameraFrame.getRotation().getQuaternion().toRotationVector().getData(); // 3x1 3 rows 1 col
 
         Mat T = new Mat(3, 1, CvType.CV_64FC1);
@@ -375,12 +391,26 @@ public class Robot extends TimedRobot {
         Imgproc.polylines(mat, topCorners, true, outlineColor, 2);
       } /* end draw a frustum in front of the AprilTag */
 
-      // These transformations are required for the correct robot pose.
-      // They appear to arise from the tag facing the camera thus Pi radians rotated or CCW/CW flipped from
-      // the mathematically described pose from the estimator that's what our eyes see. The true rotation
-      // has to be used to get the right robot pose. It seems that the T and R from the estimator could take
-      // care of all this (it is consistent without the extra transform when drawing the tag and orientation box).
+      /* 
+      This Transform3d from tagFacingCameraFrame to tagInCameraFrame is required for the correct robot pose.
+      It appear to arise from the tag facing the camera thus Pi radians rotated or CCW/CW flipped from
+      the mathematically described pose from the estimator that's what our eyes see. The true rotation
+      has to be used to get the right robot pose. It seems that the T and R from the estimator could take
+      care of all this (it is consistent without the extra transform when drawing the tag and orientation box).
 
+      From PhotonVision this is likely the explanation:
+      * The AprilTag pose rotation outputs are X left, Y down, Z away from the tag
+      * with the tag facing
+      * the camera upright and the camera facing the target parallel to the floor.
+      * But our OpenCV
+      * solvePNP code would have X left, Y up, Z towards the camera with the target
+      * facing the camera
+      * and both parallel to the floor. So we apply a base rotation to the rotation
+      * component of the
+      * apriltag pose to make it consistent with the EDN system that OpenCV uses,
+      * internally a 180
+      * rotation about the X axis
+      */
       var tagInCameraFrame = new Transform3d(
       new Translation3d(
                     tagFacingCameraFrame.getX(),
@@ -391,19 +421,30 @@ public class Robot extends TimedRobot {
                   -tagFacingCameraFrame.getRotation().getY(),
                   tagFacingCameraFrame.getRotation().getZ() - Math.PI));
 
-      // OpenCV and WPILib estimator layout of axes is EDN and field WPILib is NWU; need x -> -y , y -> -z , z -> x and same for differential rotations
+      /*
+      from WPILib documentation Drive classes:
+      Axis Conventions:
+      The drive classes use the NWU axes convention (North-West-Up as external reference in the world frame).
+      The positive X axis points ahead, the positive Y axis points left, and the positive Z axis points up.
+      We use NWU here because the rest of the library, and math in general, use NWU axes convention.
+
+      Joysticks follow NED (North-East-Down) convention, where the positive X axis points ahead, the
+      positive Y axis points right, and the positive Z axis points down. However, it’s important to note
+      that axes values are rotations around the respective axes, not translations. When viewed with each
+      axis pointing toward you, CCW is a positive value and CW is a negative value. Pushing forward on the joystick is a CW rotation around the Y axis, so you get a negative value. Pushing to the right is a CCW rotation around the X axis, so you get a positive value.
+      */
+      // OpenCV and WPILib estimator layout of axes is EDN and field WPILib is NWU;
+      // need x -> -y , y -> -z , z -> x and same for differential rotations
       // pose = CoordinateSystem.convert(pose, CoordinateSystem.EDN(), CoordinateSystem.NWU());
-      // WPILib convert is wrong for transforms as of 2023.4.3 so use this patch for now
-      {
-      // corrected convert
+      // WPILib CoordinateSystem.convert is wrong for transforms as of 2023.4.3 so use this patch for now
+      { // corrected convert
       var from = CoordinateSystem.EDN();
       var to = CoordinateSystem.NWU();
       tagInCameraFrame = new Transform3d(
                 CoordinateSystem.convert(tagInCameraFrame.getTranslation(), from, to),
                 CoordinateSystem.convert(new Rotation3d(), to, from)
                     .plus(CoordinateSystem.convert(tagInCameraFrame.getRotation(), from, to)));
-      // end of corrected convert
-      }
+      } // end of corrected convert
       
       var // transform to camera from robot chassis center at floor level
       cameraInRobotFrame = new Transform3d(       
@@ -417,6 +458,9 @@ public class Robot extends TimedRobot {
 
       var // robot in field is the composite of 3 pieces
       robotInFieldFrame = ComputerVisionUtil.objectToRobotPose(tagInFieldFrame,  tagInCameraFrame,  cameraInRobotFrame);
+
+      // the above transforms match LimeLight Vision botpose_wpiblue network tables entries
+      // as they display in AdvantageScope 3D Field robotInFieldFrame
 
       // end transforms to get the robot pose from this vision tag pose
 
@@ -548,5 +592,4 @@ public class Robot extends TimedRobot {
     protected int frameNumber = 0;
     protected long acquisitionTime = 0;
   }
-
 }
