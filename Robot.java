@@ -2,11 +2,35 @@
 // Open Source Software; you can modify and/or share it under the terms of
 // the WPILib BSD license file in the root directory of this project.
 
-/*      Apriltag has known pose on the field loaded from file
-        Detected tag's perspective seen by the camera is used to calculate an estimate of the camera pose relative to the tag
-        Camera has a known pose relative to the robot chassis hard coded herein
-        Combine this chain to calculate the robot pose in the field
-*/
+
+/**
+ * This is a demo program showing the detection of AprilTags. The image is acquired from the USB
+ * camera, then any detected AprilTags are marked up on the image, transformed to the robot on
+ * the field pose and sent to the dashboard.
+ *
+ * Be aware that the performance on this is much worse than a coprocessor solution!
+ * 
+ * This example includes an estimated latency time from the time the image appears through to
+ * the end of processing the robot pose.
+ * 
+ * The latency of acquiring the image from the camera mostly depends on the fps setting
+ * of the camera, the shutter is global or where the object is if progressive scan.
+ * Timing starts before the frame grab statement and that appears to account for much
+ * of the camera latency at least for the LifeCam.
+ * 
+ * The camera view is displayed with additional information of latency and the AprilTag pose to camera.
+ * That display is optional and a tiny bit of cpu processing can be saved by not doing it.
+ * Since AprilTag view can be in normal light that camera can also be used by the operator if it's
+ * pointing in a good direction. If the operator doesn't need that view, don't display it and
+ * the image can be made a little darker and more contrast - whatever can reduce the cpu
+ * processing time for an image. Experiment with exposure, contrast, gamma, brightness, etc.
+ * 
+ * Apriltag has known pose on the field loaded from file (WPILib or your custom file).
+ * Detected tag's perspective seen by the camera is used to calculate an estimate of the camera pose relative to the tag.
+ * Camera has a known pose relative to the robot chassis hard coded herein (change it!).
+ * Combine this chain to calculate the robot pose in the field.
+ * Camera parameters must be provided from another source source as the related calibration program.
+*/     
 
 package frc.robot;
 
@@ -50,43 +74,22 @@ import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.wpilibj.Filesystem;
 import edu.wpi.first.wpilibj.TimedRobot;
 
-/**
- * This is a demo program showing the detection of AprilTags. The image is acquired from the USB
- * camera, then any detected AprilTags are marked up on the image, transformed to the robot on
- * the field pose and sent to the dashboard.
- *
- * <p>Be aware that the performance on this is much worse than a coprocessor solution!
- * 
- * This example includes an estimated latency time from image appearing to through to
- * the end of processing the robot pose.
- * The latency of acquiring the image from the camera mostly depends on the fps setting
- * of the camera, the shutter is global or where the object is if progressive scan.
- * Timing starts before the frame grab statement and that appears to account for much
- * of the camera latency at least for the LifeCam.
- * 
- * The camera view is displayed with additional information of latency and the AprilTag pose to camera.
- * That display is optional and a tiny bit of cpu processing can be saved by not doing it.
- * Since AprilTag view can be in normal light that camera can also be used by the operator if it's
- * pointing in a good direction. If the operator doesn't need that view, don't display it and
- * the image can be made a little darker and more contrast - whatever can reduce the cpu
- * processing time for an image. Experiment with exposure, contrast, gamma, brightness, etc.
- */
 public class Robot extends TimedRobot {
   
   static {
     System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
 }
 
-  // the roboRIO won't handle more resolution than 320x240 (not enough cpu).
+  // the roboRIO won't handle more resolution than about 320x240 (not enough cpu).
   // Calibrate the camera at the used resolution or scale Fx,Fy,Cx,Cy proportional
   // to what resolution was used for camera calibration.
   int cameraW = 320;
   int cameraH = 240;
-  public Image image = new Image(); // where a video frame goes for others to use
+  public Image image = new Image(); // where a video frame goes for multiple processes to use
 
   @Override
   public void robotInit() {
-    var visionThread1 = new Thread(() -> acquireApriltagThread());
+    var visionThread1 = new Thread(this::acquireApriltagThread);
     visionThread1.setDaemon(true);
     visionThread1.start();
 
@@ -98,9 +101,17 @@ public class Robot extends TimedRobot {
       e.printStackTrace();
     }
 
-    var visionThread2 = new Thread(() -> acquireRobotPoseThread());
+    var visionThread2 = new Thread(this::acquireRobotPoseThread);
     visionThread2.setDaemon(true);
     visionThread2.start();
+  }
+
+  @Override
+  public void teleopPeriodic()
+  // enable this increases latency from 80ish to 95ish [ms]
+  // and reduces fps from 20ish to 17ish (both have very wide variations)
+  {
+    for(int i = 1; i < 600_000; i++); // waste some cputime - the edge of 20ms overruns
   }
 
   void acquireApriltagThread() {
@@ -123,8 +134,7 @@ public class Robot extends TimedRobot {
       if(ChargedUpTagLayout)
         aprilTagFieldLayout = AprilTagFieldLayout.loadFromResource(AprilTagFields.k2023ChargedUp.m_resourceFile); // WPILib standard
       else
-        aprilTagFieldLayout = new AprilTagFieldLayout(Filesystem.getDeployDirectory() + "/2023-chargedup.json"); // my custom
-      
+        aprilTagFieldLayout = new AprilTagFieldLayout(Filesystem.getDeployDirectory() + "/2023-chargedup.json"); // custom file
     } catch (IOException e) {
       e.printStackTrace();
       aprilTagFieldLayout = null;
@@ -143,12 +153,11 @@ public class Robot extends TimedRobot {
     aprilTagFieldLayout.getTags().forEach(printTag);
     
     // Get the UsbCamera from CameraServer
-    // /dev/v4l/by-id/usb-Arducam_Technology_Co.__Ltd._Arducam_OV9281_USB_Camera_UC762-video-index0
     UsbCamera camera = CameraServer.startAutomaticCapture(); // http://10.42.37.2:1181/   http://roborio-4237-frc.local:1181/?action=stream
           //"myCam", "/dev/v4l/by-id/usb-Arducam_Technology_Co.__Ltd._Arducam_OV9281_USB_Camera_UC762-video-index0"
     // Set the resolution and frames per second
     camera.setResolution(cameraW, cameraH);
-    camera.setFPS(100); // 30 for lifecam 100 for arducam
+    camera.setFPS(100); // 30 for lifecam, 100 for arducam
     camera.setExposureAuto();
 
     // Get a CvSink. This will capture Mats from the camera
@@ -158,9 +167,8 @@ public class Robot extends TimedRobot {
     var mat = new Mat();
     var grayMat = new Mat();
 
-    // This cannot be 'true'. The program will never exit if it is. This
-    // lets the robot stop this thread when restarting robot code or
-    // deploying.
+    // This 'while' cannot be 'true'. The program will never exit if it is. This
+    // lets the robot stop this thread when restarting robot code or deploying.
     while (!Thread.interrupted()) {
       // Tell the CvSink to grab a frame from the camera and put it
       // in the source mat.  If there is an error notify the output.
@@ -188,7 +196,8 @@ public class Robot extends TimedRobot {
 
   public void acquireRobotPoseThread()
   {
-    // Set up Pose Estimator - parameters are for a Microsoft Lifecam HD-3000
+    // Set up Pose Estimator - parameters included for a Microsoft Lifecam HD-3000
+    // and rough estimates for an ArduCam UC-844
     // (https://www.chiefdelphi.com/t/wpilib-apriltagdetector-sample-code/421411/21)
 
     // Positions of AprilTags
@@ -240,7 +249,8 @@ public class Robot extends TimedRobot {
     // distortion coefficients Mat [ 1*5*CV_64FC1, isCont=true, isSubmat=false, nativeObj=0x1f04d2ed520, dataAddr=0x1f04d38da80 ]
     // [0.03872533667096114, -0.2121025605447465, 0.00334472765894009, -0.006080540135581289, 0.4001779842036727]
     MatOfDouble distCoeffs = new MatOfDouble(
-      // much of the bit of distortion from calibration was actually the board not being smooth so don't bother using the distortion
+      // much of the small amount of distortion from calibration was actually the board
+      // not being smooth so don't bother using the distortion
       // 0.03872533667096114, -0.2121025605447465, 0.00334472765894009, -0.006080540135581289, 0.4001779842036727
       );
 ///////////////////////////
@@ -344,9 +354,9 @@ public class Robot extends TimedRobot {
               new Point3(1.*tagSize/2., -1.*tagSize/2., -0.7*tagSize),
               new Point3(-1.*tagSize/2., -1.*tagSize/2., -0.7*tagSize));
 
-        // The opencv rvec is a rotation vector with three elements representing the axis scaled by
+        // The OpenCV rvec is a rotation vector with three elements representing the axis scaled by
         // the angle in the EDN coordinate system. (angle = norm, and axis = rvec / norm).
-        // This is not the same 3 elements of the 3 rotations for the 3 axes that may be used in WPILib Rotation3D.
+        // This is not the same 3 elements of the 3 rotations for the 3 axes that might be used in WPILib Rotation3D.
         double[] rotationVector = tagFacingCameraFrame.getRotation().getQuaternion().toRotationVector().getData(); // 3x1 3 rows 1 col
 
         Mat T = new Mat(3, 1, CvType.CV_64FC1);
@@ -365,14 +375,10 @@ public class Robot extends TimedRobot {
         // draw from bottom points to top points - pillars
         for(int i = 0; i < 4; i++)
         {
-            double x1;
-            double y1;
-            double x2;
-            double y2;
-            x1 = imagePointsBottom.get(i, 0)[0];
-            y1 = imagePointsBottom.get(i, 0)[1];
-            x2 = imagePointsTop.get(i, 0)[0];
-            y2 = imagePointsTop.get(i, 0)[1];
+            var x1 = imagePointsBottom.get(i, 0)[0];
+            var y1 = imagePointsBottom.get(i, 0)[1];
+            var x2 = imagePointsTop.get(i, 0)[0];
+            var y2 = imagePointsTop.get(i, 0)[1];
 
             topCornerPoints.add(new Point(x2, y2));
 
@@ -393,10 +399,10 @@ public class Robot extends TimedRobot {
 
       /* 
       This Transform3d from tagFacingCameraFrame to tagInCameraFrame is required for the correct robot pose.
-      It appear to arise from the tag facing the camera thus Pi radians rotated or CCW/CW flipped from
-      the mathematically described pose from the estimator that's what our eyes see. The true rotation
-      has to be used to get the right robot pose. It seems that the T and R from the estimator could take
-      care of all this (it is consistent without the extra transform when drawing the tag and orientation box).
+      It appears to arise from the tag facing the camera thus Pi radians rotated or CCW/CW flipped from
+      the mathematically described pose from the estimator. The true rotation has to be used to get the
+      right robot pose. It seems that the T and R from the estimator could take care of all this (it is
+      consistent without the extra transform when drawing the tag and orientation box).
 
       From PhotonVision this is likely the explanation:
       * The AprilTag pose rotation outputs are X left, Y down, Z away from the tag
@@ -420,7 +426,6 @@ public class Robot extends TimedRobot {
                   -tagFacingCameraFrame.getRotation().getX() - Math.PI,
                   -tagFacingCameraFrame.getRotation().getY(),
                   tagFacingCameraFrame.getRotation().getZ() - Math.PI));
-
       /*
       from WPILib documentation Drive classes:
       Axis Conventions:
@@ -446,12 +451,12 @@ public class Robot extends TimedRobot {
                     .plus(CoordinateSystem.convert(tagInCameraFrame.getRotation(), from, to)));
       } // end of corrected convert
       
-      var // transform to camera from robot chassis center at floor level
+      var // transform to camera from robot chassis center at floor level - robot specific!
       cameraInRobotFrame = new Transform3d(       
-      //                      new Translation3d(0., 0., 0.),// camera at center bottom of robot zeros for test data 
-      //                      new Rotation3d(0.0, Units.degreesToRadians(0.), Units.degreesToRadians(0.0))); // camera in line with robot chassis
-                      new Translation3d(0.2, 0., 0.8),// camera in front of center of robot and above ground
-                        new Rotation3d(0., Units.degreesToRadians(-25.), 0.)); // camera in line with robot chassis, pointing up slightly
+      //      new Translation3d(0., 0., 0.),// camera at center bottom of robot zeros for test data 
+      //      new Rotation3d(0.0, Units.degreesToRadians(0.), Units.degreesToRadians(0.0))); // camera in line with robot chassis
+              new Translation3d(0.2, 0., 0.8),// camera in front of center of robot and above ground
+              new Rotation3d(0., Units.degreesToRadians(-25.), 0.)); // camera in line with robot chassis, pointing up slightly
       // x + roll is camera rolling CCW relative to the robot looking facing the robot
       // y + pitch is camera pointing down relative to the robot. -25 camera points up; +25 points down; sign is correct but backwards of LL
       // z + yaw is camera pointing to the left of robot looking down on it (CCW relative to the robot)
@@ -560,7 +565,6 @@ public class Robot extends TimedRobot {
       }
 
       public synchronized AprilTagDetection[] getImage(Mat mat,  AcquisitionTime acquisitionTime)
-
       {
           try
           {
