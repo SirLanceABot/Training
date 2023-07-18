@@ -106,7 +106,7 @@ public class Program {
 
         // int printCount = 0;
 
-        /// Charco Board
+        /// Charuco Board
         final Dictionary dictionary = Objdetect.getPredefinedDictionary(Objdetect.DICT_5X5_1000);
         final int squaresX = 11;
         final int squaresY = 8;
