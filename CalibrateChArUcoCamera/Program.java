@@ -80,6 +80,7 @@ public class Program {
 
     public static void main(String[] args) throws IOException, InterruptedException {
 
+        // not sure which of these are required for the camera server so leave them all in
         NetworkTablesJNI.Helper.setExtractOnStaticLoad(false);
         WPIUtilJNI.Helper.setExtractOnStaticLoad(false);
         WPIMathJNI.Helper.setExtractOnStaticLoad(false);
@@ -87,10 +88,25 @@ public class Program {
         CombinedRuntimeLoader.loadLibraries(Program.class, "wpiutiljni", "wpimathjni", "ntcorejni", "cscorejnicvstatic");
         // var inst = NetworkTableInstance.getDefault(); // not using NT in this program
 
+        /// video image capture
+
+        // Get the UsbCamera from CameraServer
+        final UsbCamera camera = CameraServer.startAutomaticCapture(camId);
+        camera.setResolution(cameraW, cameraH);
+        camera.setFPS(cameraFPS); // 30 max for lifecam
+        camera.setExposureAuto();
+           
+        // Get a CvSink. This will capture Mats from the camera
+        JavaCvSink cvSink = new JavaCvSink("sink1"); //CameraServer.getVideo();
+        cvSink.setSource(camera);
+        // Mats are very memory expensive. Lets reuse these.
+        final Mat image = new Mat();
+        final Mat grayMat = new Mat();
+        ///
+
         // int printCount = 0;
 
         /// Charco Board
-        // print the board then measure it carefully and put those measurements below
         final Dictionary dictionary = Objdetect.getPredefinedDictionary(Objdetect.DICT_5X5_1000);
         final int squaresX = 11;
         final int squaresY = 8;
@@ -127,25 +143,9 @@ public class Program {
 
         final int waitTime = 1000;
         final Size imgSize = new Size(cameraW, cameraH);
-
-        /// video image capture
-
-        // Get the UsbCamera from CameraServer
-        final UsbCamera camera = CameraServer.startAutomaticCapture(camId);
-        camera.setResolution(cameraW, cameraH);
-        camera.setFPS(cameraFPS); // 30 max for lifecam
-        camera.setExposureAuto();
-           
-        // Get a CvSink. This will capture Mats from the camera
-        JavaCvSink cvSink = new JavaCvSink("sink1"); //CameraServer.getVideo();
-        cvSink.setSource(camera);
-        // Mats are very memory expensive. Lets reuse these.
-        final Mat image = new Mat();
-        final Mat grayMat = new Mat();
-        ///
-    
-        List<Mat> allCharucoCorners = new ArrayList<>();
-        List<Mat> allCharucoIds = new ArrayList<>();
+  
+        // List<Mat> allCharucoCorners = new ArrayList<>();
+        // List<Mat> allCharucoIds = new ArrayList<>();
         List<Mat> allImagePoints = new ArrayList<>();
         List<Mat> allObjectPoints = new ArrayList<>();
         // Detect charuco board from several viewpoints and fill
@@ -384,54 +384,17 @@ public class Program {
 // .
 // .
 // .
-// 114 frames captured
+// 33 frames captured
 // (slowly) CALIBRATING CAMERA
 // Arducam OV9281 USB Camera (1)
 // 320x240
-// camera matrix Mat [ 3*3*CV_64FC1, isCont=true, isSubmat=false, nativeObj=0x1a66b813900, dataAddr=0x1a66e5c53c0 ]
-// [229.6626080788598, 0, 164.8030509174101;
-//  0, 228.18269360966, 114.3647984489618;
+// camera matrix Mat [ 3*3*CV_64FC1, isCont=true, isSubmat=false, nativeObj=0x1f04d2ecf00, dataAddr=0x1f04cd02340 ]
+// [273.8682279422785, 0, 142.187975375679;
+//  0, 274.2578211409246, 124.6151823259089;
 //  0, 0, 1]
-// distortion coefficients Mat [ 1*5*CV_64FC1, isCont=true, isSubmat=false, nativeObj=0x1a66b813ba0, dataAddr=0x1a66c32fb40 ]
-// [-0.09066001489984649, 0.203254195450917, -0.00932087456854446, 0.007449679350668339, -0.2048258601718673]
-// repError 3.288901566607536
-
-// 158 frames captured
-// (slowly) CALIBRATING CAMERA
-// Arducam OV9281 USB Camera (1)
-// 320x240
-// camera matrix Mat [ 3*3*CV_64FC1, isCont=true, isSubmat=false, nativeObj=0x283d19cda20, dataAddr=0x283d178bec0 ]
-// [2192.222626638505, 0, 158.2939963033187;
-//  0, 3817.1848619556, 97.22493749165129;
-//  0, 0, 1]
-// distortion coefficients Mat [ 1*5*CV_64FC1, isCont=true, isSubmat=false, nativeObj=0x283d19cc8a0, dataAddr=0x283d4a0a8c0 ]
-// [4.766421866222886, -244.0182073158604, -0.05658295270067953, 0.1636478251254295, -975.6841692316784]
-// repError 1.6069469897480628
-
-// 73 frames captured
-// (slowly) CALIBRATING CAMERA
-// Arducam OV9281 USB Camera (1)
-// 320x240
-// camera matrix Mat [ 3*3*CV_64FC1, isCont=true, isSubmat=false, nativeObj=0x17fb8e4bf50, dataAddr=0x17fbc574940 ]
-// [262.3625956344302, 0, 143.1668020731382;
-//  0, 266.9098219120432, 130.1605324323735;
-//  0, 0, 1]
-// distortion coefficients Mat [ 1*5*CV_64FC1, isCont=true, isSubmat=false, nativeObj=0x17fb8e4be00, dataAddr=0x17fbbbe93c0 ]
-// [-0.03667092969367813, 0.09698771569209549, 0.003697959710534216, 0.003773422311724747, -0.1108149233510407]
-// repError 0.4869104211371649
-
-// 20 frames captured
-// (slowly) CALIBRATING CAMERA
-// Arducam OV9281 USB Camera (1)
-// 320x240
-// camera matrix Mat [ 3*3*CV_64FC1, isCont=true, isSubmat=false, nativeObj=0x1cd28dc6880, dataAddr=0x1cd28d446c0 ]
-// [273.4228695437403, 0, 145.7386299032018;
-//  0, 274.3216850676515, 124.4214043065032;
-//  0, 0, 1]
-// distortion coefficients Mat [ 1*5*CV_64FC1, isCont=true, isSubmat=false, nativeObj=0x1cd28dc7610, dataAddr=0x1cd25cf0440 ]
-// [0.0784569904015452, -0.2228623823880342, 0.002313757736825509, -0.002352928864210518, 0.2985419246813718]
-// repError 0.5106204275049745
-
+// distortion coefficients Mat [ 1*5*CV_64FC1, isCont=true, isSubmat=false, nativeObj=0x1f04d2ed520, dataAddr=0x1f04d38da80 ]
+// [0.03872533667096114, -0.2121025605447465, 0.00334472765894009, -0.006080540135581289, 0.4001779842036727]
+// repError 0.5272319660857067
 /*
 System.out.println(dictionary.get_bytesList().total());
 System.out.println(dictionary.get_bytesList() + "\n" + dictionary.get_bytesList().dump());
@@ -484,57 +447,8 @@ void drawDetectedCornersCharuco(InputOutputArray _image, InputArray _charucoCorn
 // You want to get images of the chessboard to collectively cover most of the FOV as well as the
 // chessboard with minor tilt if possible (not completely parallel to the camera).
 
-// don't capture too many frames and don't repeat views as that seems to skew the results a lot. Move
-// around the edges pointing at the target. Don't do more than a couple straight-on at the middle of
+// don't capture too many frames and don't repeat views as that seems to skew the results a lot sometimes.
+// Move around the edges pointing at the target. Don't do more than a couple straight-on at the middle of
 // the board.
-/*
-0
-[-0.3843782727972536;
- 0.04665637528558304;
- 0.1256835215511318]
-[-0.1256348364895211;
- -0.09259992384170322;
- 0.2555600760374292]
-1
-[-0.2102855433927293;
- 0.6665324808261487;
- -0.03547535618272864]
-[-0.1478460327706186;
- -0.08506969926601067;
- 0.4453159871857921]
-2
-[0.3275238551113911;
- -0.5853019684024241;
- 0.06578745292065756]
-[-0.0590084311095838;
- -0.04216345804226997;
- 0.2547831637409428]
-3
-[0.7352132442260926;
- 0.1555128915429818;
- -0.1096949392600692]
-[-0.07858152262851925;
- 0.0263682591785688;
- 0.255822268323756]
-4
-[0.1062213612216823;
- 0.1403091719592303;
- -0.02873230273053752]
-[-0.1026053260285888;
- -0.070107764740395;
- 0.2158616334205405]
-5
-[0.1165489600216269;
- 0.1459851891036928;
- -0.02243723416446729]
-[-0.1005445623609558;
- -0.0723663210007498;
- 0.2160089068333739]
-6
-[0.1169066120183521;
- 0.1480066010435835;
- -0.02156727797783599]
-[-0.100431131800067;
- -0.07281524792898098;
- 0.2180031762482469]
- */
+
+//It is important to note that sometimes in case of high radial distortions, using the getOptimalNewCameraMatrix() with alpha=0 generates a blank image. This usually happens because the method gets poor estimates for the distortion at the edges. In such cases you need to recalibrate the camera and ensure that more images are taken with different views close to image borders. This way more samples near image border would be available for estimating the distortion, thus improving the estimation.
