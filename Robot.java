@@ -87,6 +87,9 @@ public class Robot extends TimedRobot {
   int cameraH = 240;
   public Image image = new Image(); // where a video frame goes for multiple processes to use
 
+  final boolean useLL = false; // do LimeLight processing
+  LL ll;
+
   @Override
   public void robotInit() {
     var visionThread1 = new Thread(this::acquireApriltagThread);
@@ -104,61 +107,44 @@ public class Robot extends TimedRobot {
     var visionThread2 = new Thread(this::acquireRobotPoseThread);
     visionThread2.setDaemon(true);
     visionThread2.start();
+
+    if (useLL) ll = new LL();
+  }
+
+@Override
+  public void robotPeriodic()
+  {
+      if (useLL) ll.LLacquire();
   }
 
   @Override
   public void teleopPeriodic()
+  // test how much cpu time is left after AprilTag pose process
   // enable this increases latency from 80ish to 95ish [ms]
   // and reduces fps from 20ish to 17ish (both have very wide variations)
   {
-    for(int i = 1; i < 600_000; i++); // waste some cputime - the edge of 20ms overruns
+    // for(int i = 1; i < 600_000; i++); // waste some cputime - the edge of 20ms overruns
   }
 
   void acquireApriltagThread() {
-
-    final boolean ChargedUpTagLayout = true; // false is use custom deploy of layout
-
     int frameNumber = 0;
     long acquisitionTime = 0;
-
+    long frameError = 0;
+    
     var detector = new AprilTagDetector();
-    // look for tag16h5, don't correct any error bits
-    detector.addFamily("tag16h5", 0);
+    // // look for tag16h5, don't correct any error bits 2023
+    // detector.addFamily("tag16h5", 0); 2023
 
-    // Tag positions
-    // tag rotation is CCW looking down on field from the ceiling.
-    // rotating around Z, 0 degrees is parallel to Y and facing down field or +X. 30 degrees is still
-    // facing down field +X and a little facing into the +Y across the field
-    AprilTagFieldLayout aprilTagFieldLayout;
-    try {
-      if(ChargedUpTagLayout)
-        aprilTagFieldLayout = AprilTagFieldLayout.loadFromResource(AprilTagFields.k2023ChargedUp.m_resourceFile); // WPILib standard
-      else
-        aprilTagFieldLayout = new AprilTagFieldLayout(Filesystem.getDeployDirectory() + "/2023-chargedup.json"); // custom file
-    } catch (IOException e) {
-      e.printStackTrace();
-      aprilTagFieldLayout = null;
-    }
-
-    Consumer<AprilTag> printTag = tag ->
-      {
-        System.out.format("%s %6.1f, %6.1f, %6.1f [degrees]%n",
-              tag.toString(),
-              Units.radiansToDegrees(tag.pose.getRotation().getX()),
-              Units.radiansToDegrees(tag.pose.getRotation().getY()),
-              Units.radiansToDegrees(tag.pose.getRotation().getZ()));
-      };
-
-    System.out.println(aprilTagFieldLayout.getTags().size() + " Tags on file");    
-    aprilTagFieldLayout.getTags().forEach(printTag);
+    // look for tag36h11, correct 3 error bits
+    detector.addFamily("tag36h11", 1);
     
     // Get the UsbCamera from CameraServer
     UsbCamera camera = CameraServer.startAutomaticCapture(); // http://10.42.37.2:1181/   http://roborio-4237-frc.local:1181/?action=stream
           //"myCam", "/dev/v4l/by-id/usb-Arducam_Technology_Co.__Ltd._Arducam_OV9281_USB_Camera_UC762-video-index0"
     // Set the resolution and frames per second
     camera.setResolution(cameraW, cameraH);
-    camera.setFPS(100); // 30 for lifecam, 100 for arducam
-    camera.setExposureAuto();
+    camera.setFPS(30); // 30 for lifecam, 100 for arducam
+    // camera.setExposureAuto();
 
     // Get a CvSink. This will capture Mats from the camera
     CvSink cvSink = CameraServer.getVideo(camera);
@@ -175,7 +161,7 @@ public class Robot extends TimedRobot {
       frameNumber++;
 
       acquisitionTime = System.nanoTime();
-      if (cvSink.grabFrame(mat, 1.) == 0) {
+      if (cvSink.grabFrame(mat, 1.) == frameError) {
         // Send the output the error.
         System.out.println(cvSink.getError());
         // skip the rest of the current iteration
@@ -200,19 +186,41 @@ public class Robot extends TimedRobot {
     // and rough estimates for an ArduCam UC-844
     // (https://www.chiefdelphi.com/t/wpilib-apriltagdetector-sample-code/421411/21)
 
-    // Positions of AprilTags
+   // Tag positions
+    // tag rotation is CCW looking down on field from the ceiling.
+    // rotating around Z, 0 degrees is parallel to Y and facing down field or +X. 30 degrees is still
+    // facing down field +X and a little facing into the +Y across the field
+
+    final boolean CustomTagLayout = false; // true is use custom deploy of layout
+
     AprilTagFieldLayout aprilTagFieldLayout;
     try {
-        aprilTagFieldLayout = AprilTagFieldLayout.loadFromResource(AprilTagFields.k2023ChargedUp.m_resourceFile);
-    } catch (IOException e) {
+      if(CustomTagLayout)
+        aprilTagFieldLayout = new AprilTagFieldLayout(Filesystem.getDeployDirectory() + "/2024-crescendo.json"); // custom file example
+      else
+        aprilTagFieldLayout = AprilTagFields.k2024Crescendo.loadAprilTagLayoutField();
+      } catch (IOException e) {
       e.printStackTrace();
       aprilTagFieldLayout = null;
     }
+
+    Consumer<AprilTag> printTag = tag ->
+      {
+        System.out.format("%s %6.1f, %6.1f, %6.1f [degrees]%n",
+              tag.toString(),
+              Units.radiansToDegrees(tag.pose.getRotation().getX()),
+              Units.radiansToDegrees(tag.pose.getRotation().getY()),
+              Units.radiansToDegrees(tag.pose.getRotation().getZ()));
+      };
+
+    System.out.println(aprilTagFieldLayout.getTags().size() + " Tags on file");    
+    aprilTagFieldLayout.getTags().forEach(printTag);
 
     // Instantiate once
     ArrayList<Long> tags = new ArrayList<>();
     var outlineColor = new Scalar(0, 255, 0); // bgr
     var crossColor = new Scalar(0, 0, 255); // bgr
+    var crossLength = 10;
     Mat mat = new Mat();
     AcquisitionTime acquisitionTime = new AcquisitionTime();
     int latency = 0;
@@ -230,36 +238,48 @@ public class Robot extends TimedRobot {
     // cx camera horizontal focal center, in pixels
     // cy camera vertical focal center, in pixels
 ///////////////////////////
-    // 320x240 lifecam calibration from PhotonVision
-    // double cameraFx = 353.74653217742724;
-    // double cameraFy = 340.77624878700817;
-    // double cameraCx = 163.5540798921191;
-    // double cameraCy = 119.8945718300403;
+    // 640x480 lifecam calibration from WPILib example
+    // double cameraFx = 699.3778103158814;
+    // double cameraFy = 677.7161226393544;
+    // double cameraCx = 345.6059345433618;
+    // double cameraCy = 207.12741326228522;
     // MatOfDouble distCoeffs = new MatOfDouble();
+///////////////////////////
+    // 320x240 lifecam calibration from PhotonVision
+    double cameraFx = 353.74653217742724;
+    double cameraFy = 340.77624878700817;
+    double cameraCx = 163.5540798921191;
+    double cameraCy = 119.8945718300403;
+    MatOfDouble distCoeffs = new MatOfDouble();
 ///////////////////////////
     // 320x240 arducam calibration from rkt
     // [273.8682279422785, 0, 142.187975375679;
     //  0, 274.2578211409246, 124.6151823259089;
     //  0, 0, 1]
     // rough calibration - wasn't done with a nice flat board
-    double cameraFx = 273.8682279422785;
-    double cameraFy = 274.2578211409246;
-    double cameraCx = 142.187975375679;
-    double cameraCy = 124.6151823259089;
+    // double cameraFx = 273.8682279422785;
+    // double cameraFy = 274.2578211409246;
+    // double cameraCx = 142.187975375679;
+    // double cameraCy = 124.6151823259089;
     // distortion coefficients Mat [ 1*5*CV_64FC1, isCont=true, isSubmat=false, nativeObj=0x1f04d2ed520, dataAddr=0x1f04d38da80 ]
     // [0.03872533667096114, -0.2121025605447465, 0.00334472765894009, -0.006080540135581289, 0.4001779842036727]
-    MatOfDouble distCoeffs = new MatOfDouble(
+    // MatOfDouble distCoeffs = new MatOfDouble(
       // much of the small amount of distortion from calibration was actually the board
       // not being smooth so don't bother using the distortion
       // 0.03872533667096114, -0.2121025605447465, 0.00334472765894009, -0.006080540135581289, 0.4001779842036727
-      );
+      // );
 ///////////////////////////
-    double tagSize = 0.1524; // meters of the targeted AprilTag
+    // double tagSize = 0.1524; // meters of the targeted AprilTag 2023
+    double tagSize = 0.1651; // meters of the targeted AprilTag
 
     // (https://www.chiefdelphi.com/t/wpilib-apriltagdetector-sample-code/421411/21)
     var poseEstConfig =
         new AprilTagPoseEstimator.Config( tagSize, cameraFx, cameraFy, cameraCx, cameraCy);
-
+  // Set up Pose Estimator - parameters are for a Microsoft Lifecam HD-3000
+    // (https://www.chiefdelphi.com/t/wpilib-apriltagdetector-sample-code/421411/21)
+    // var poseEstConfig =
+    //     new AprilTagPoseEstimator.Config(
+    //         0.1651, 699.3778103158814, 677.7161226393544, 345.6059345433618, 207.12741326228522);
     var estimator = new AprilTagPoseEstimator(poseEstConfig);
 
     // We'll output to NT
@@ -306,15 +326,14 @@ public class Robot extends TimedRobot {
       // mark the center of the tag
       var cx = detection.getCenterX();
       var cy = detection.getCenterY();
-      var ll = 10;
-      Imgproc.line(mat, new Point(cx - ll, cy), new Point(cx + ll, cy), crossColor, 2);
-      Imgproc.line(mat, new Point(cx, cy - ll), new Point(cx, cy + ll), crossColor, 2);
+      Imgproc.line(mat, new Point(cx - crossLength, cy), new Point(cx + crossLength, cy), crossColor, 2);
+      Imgproc.line(mat, new Point(cx, cy - crossLength), new Point(cx, cy + crossLength), crossColor, 2);
 
       // identify the tag
       Imgproc.putText(
           mat,
           Integer.toString(detection.getId()),
-          new Point(cx + ll, cy),
+          new Point(cx + crossLength, cy),
           Imgproc.FONT_HERSHEY_SIMPLEX,
           1,
           crossColor,
@@ -356,7 +375,19 @@ public class Robot extends TimedRobot {
 
         // The OpenCV rvec is a rotation vector with three elements representing the axis scaled by
         // the angle in the EDN coordinate system. (angle = norm, and axis = rvec / norm).
-        // This is not the same 3 elements of the 3 rotations for the 3 axes that might be used in WPILib Rotation3D.
+        // Those three elements are not the same 3 elements of the 3 rotations for the 3 axes that might be used in WPILib Rotation3D.
+		// Those are roll, pitch, and yaw (Euler angles?) that can be converted to the rotation vector (directional vector?)
+		// and vice versa. The roll, pitch, and yaw angles can be recovered from the rotation vector:
+		// Rodrigues conversion of rotation vector to rotation matrix (or vice versa)
+		// Rotation matrix to Euler angles https://learnopencv.com/rotation-matrix-to-euler-angles/
+		// https://en.wikipedia.org/wiki/Axis%E2%80%93angle_representation
+		/* https://www.reddit.com/r/computervision/comments/eek49u/q_how_to_get_the_euler_angles_from_a_rotation/?rdt=45312
+		I think of the compact representations of a rotation (Euler angles, Rodrigues vector, quaternion, etc) as practical
+		ways to communicate or store the information about rotation. But when it comes to actually using it for something 99 percent
+		of the time I use the good ol 3x3 rotation matrix because it's super easy to understand. multiply a vector and you rotate
+		the vector, invert it and get the rotation the other way round, want to know the base vectors of the world frame of
+		reference wrt the camera? this are the columns of the rotation matrix.
+		*/
         double[] rotationVector = tagFacingCameraFrame.getRotation().getQuaternion().toRotationVector().getData(); // 3x1 3 rows 1 col
 
         Mat T = new Mat(3, 1, CvType.CV_64FC1);
@@ -440,22 +471,22 @@ public class Robot extends TimedRobot {
       */
       // OpenCV and WPILib estimator layout of axes is EDN and field WPILib is NWU;
       // need x -> -y , y -> -z , z -> x and same for differential rotations
-      // pose = CoordinateSystem.convert(pose, CoordinateSystem.EDN(), CoordinateSystem.NWU());
-      // WPILib CoordinateSystem.convert is wrong for transforms as of 2023.4.3 so use this patch for now
-      { // corrected convert
-      var from = CoordinateSystem.EDN();
-      var to = CoordinateSystem.NWU();
-      tagInCameraFrame = new Transform3d(
-                CoordinateSystem.convert(tagInCameraFrame.getTranslation(), from, to),
-                CoordinateSystem.convert(new Rotation3d(), to, from)
-                    .plus(CoordinateSystem.convert(tagInCameraFrame.getRotation(), from, to)));
-      } // end of corrected convert
+      tagInCameraFrame = CoordinateSystem.convert(tagInCameraFrame, CoordinateSystem.EDN(), CoordinateSystem.NWU());
+      // // WPILib CoordinateSystem.convert was wrong for transforms in 2023 so this patch was used
+      // { // corrected convert
+      // var from = CoordinateSystem.EDN();
+      // var to = CoordinateSystem.NWU();
+      // tagInCameraFrame = new Transform3d(
+      //           CoordinateSystem.convert(tagInCameraFrame.getTranslation(), from, to),
+      //           CoordinateSystem.convert(new Rotation3d(), to, from)
+      //               .plus(CoordinateSystem.convert(tagInCameraFrame.getRotation(), from, to)));
+      // } // end of corrected convert
       
       var // transform to camera from robot chassis center at floor level - robot specific!
       cameraInRobotFrame = new Transform3d(       
-      //      new Translation3d(0., 0., 0.),// camera at center bottom of robot zeros for test data 
+           new Translation3d(0., 0., 0.),// camera at center bottom of robot zeros for test data 
       //      new Rotation3d(0.0, Units.degreesToRadians(0.), Units.degreesToRadians(0.0))); // camera in line with robot chassis
-              new Translation3d(0.2, 0., 0.8),// camera in front of center of robot and above ground
+              // new Translation3d(0.2, 0., 0.8),// camera in front of center of robot and above ground
               new Rotation3d(0., Units.degreesToRadians(-25.), 0.)); // camera in line with robot chassis, pointing up slightly
       // x + roll is camera rolling CCW relative to the robot looking facing the robot
       // y + pitch is camera pointing down relative to the robot. -25 camera points up; +25 points down; sign is correct but backwards of LL
@@ -471,6 +502,7 @@ public class Robot extends TimedRobot {
 
       // put pose into dashboard
       Rotation3d rot = robotInFieldFrame.getRotation();
+
       tagsTable
           .getEntry("pose_" + detection.getId())
           .setDoubleArray(
@@ -478,6 +510,13 @@ public class Robot extends TimedRobot {
                 robotInFieldFrame.getX(), robotInFieldFrame.getY(), robotInFieldFrame.getZ(), rot.getX(), rot.getY(), rot.getZ()
               });
 
+      tagsTable // display formatted for AdvantageScope Odometry tab
+      .getEntry("pose2D_" + detection.getId())
+      .setDoubleArray(
+          new double[] {
+            robotInFieldFrame.getX(), robotInFieldFrame.getY(), rot.getZ()
+          });
+    
       // put out to NetworkTables robot pose for this tag AdvantageScope format
       tagsTable
       .getEntry("robotpose_" + detection.getId())
@@ -597,3 +636,27 @@ public class Robot extends TimedRobot {
     protected long acquisitionTime = 0;
   }
 }
+/*
+WPILib:
+AprilTag(ID: 1, pose: Pose3d(Translation3d(X: 15.08, Y: 0.25, Z: 1.36), Rotation3d(Quaternion(0.5000000000000001, 0.0, 0.0, 0.8660254037844386)))) 0.0, 0.0, 120.0 [degrees]
+AprilTag(ID: 2, pose: Pose3d(Translation3d(X: 16.19, Y: 0.88, Z: 1.36), Rotation3d(Quaternion(0.5000000000000001, 0.0, 0.0, 0.8660254037844386)))) 0.0, 0.0, 120.0 [degrees]
+AprilTag(ID: 3, pose: Pose3d(Translation3d(X: 16.58, Y: 4.98, Z: 1.45), Rotation3d(Quaternion(6.123233995736766E-17, 0.0, 0.0, 1.0)))) 0.0, 0.0, 180.0 [degrees]
+AprilTag(ID: 4, pose: Pose3d(Translation3d(X: 16.58, Y: 5.55, Z: 1.45), Rotation3d(Quaternion(6.123233995736766E-17, 0.0, 0.0, 1.0)))) 0.0, 0.0, 180.0 [degrees]
+AprilTag(ID: 5, pose: Pose3d(Translation3d(X: 14.70, Y: 8.20, Z: 1.36), Rotation3d(Quaternion(-0.7071067811865475, -0.0, 0.0, 0.7071067811865476)))) 0.0, 0.0, -90.0 [degrees]
+AprilTag(ID: 6, pose: Pose3d(Translation3d(X: 1.84, Y: 8.20, Z: 1.36), Rotation3d(Quaternion(-0.7071067811865475, -0.0, 0.0, 0.7071067811865476)))) 0.0, 0.0, -90.0 [degrees]
+AprilTag(ID: 7, pose: Pose3d(Translation3d(X: -0.04, Y: 5.55, Z: 1.45), Rotation3d(Quaternion(1.0, 0.0, 0.0, 0.0)))) 0.0, 0.0, 0.0 [degrees]
+AprilTag(ID: 8, pose: Pose3d(Translation3d(X: -0.04, Y: 4.98, Z: 1.45), Rotation3d(Quaternion(1.0, 0.0, 0.0, 0.0)))) 0.0, 0.0, 0.0 [degrees]
+AprilTag(ID: 9, pose: Pose3d(Translation3d(X: 0.36, Y: 0.88, Z: 1.36), Rotation3d(Quaternion(0.8660254037844387, 0.0, 0.0, 0.49999999999999994)))) 0.0, 0.0, 60.0 [degrees]
+AprilTag(ID: 10, pose: Pose3d(Translation3d(X: 1.46, Y: 0.25, Z: 1.36), Rotation3d(Quaternion(0.8660254037844387, 0.0, 0.0, 0.49999999999999994)))) 0.0, 0.0, 60.0 [degrees]
+AprilTag(ID: 11, pose: Pose3d(Translation3d(X: 11.90, Y: 3.71, Z: 1.32), Rotation3d(Quaternion(-0.8660254037844387, -0.0, 0.0, 0.49999999999999994)))) 0.0, 0.0, -60.0 [degrees]
+AprilTag(ID: 12, pose: Pose3d(Translation3d(X: 11.90, Y: 4.50, Z: 1.32), Rotation3d(Quaternion(0.8660254037844387, 0.0, 0.0, 0.49999999999999994)))) 0.0, 0.0, 60.0 [degrees]
+AprilTag(ID: 13, pose: Pose3d(Translation3d(X: 11.22, Y: 4.11, Z: 1.32), Rotation3d(Quaternion(6.123233995736766E-17, 0.0, 0.0, 1.0)))) 0.0, 0.0, 180.0 [degrees]
+AprilTag(ID: 14, pose: Pose3d(Translation3d(X: 5.32, Y: 4.11, Z: 1.32), Rotation3d(Quaternion(1.0, 0.0, 0.0, 0.0)))) 0.0, 0.0, 0.0 [degrees]
+AprilTag(ID: 15, pose: Pose3d(Translation3d(X: 4.64, Y: 4.50, Z: 1.32), Rotation3d(Quaternion(0.5000000000000001, 0.0, 0.0, 0.8660254037844386)))) 0.0, 0.0, 120.0 [degrees]
+AprilTag(ID: 16, pose: Pose3d(Translation3d(X: 4.64, Y: 3.71, Z: 1.32), Rotation3d(Quaternion(-0.49999999999999983, -0.0, 0.0, 0.8660254037844388)))) 0.0, 0.0, -120.0 [degrees]
+
+
+LimeLight fmap at
+https://docs.limelightvision.io/docs/docs-limelight/pipeline-apriltag/apriltag-map-specification
+
+ */
