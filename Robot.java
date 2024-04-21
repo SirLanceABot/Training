@@ -132,11 +132,12 @@ public class Robot extends TimedRobot {
     long frameError = 0;
     
     var detector = new AprilTagDetector();
-    // // look for tag16h5, don't correct any error bits 2023
+    // // look for tag16h5 2023, don't correct any error bits
     // detector.addFamily("tag16h5", 0); 2023
 
-    // look for tag36h11, correct 3 error bits
+    // look for tag36h11 2024, correct 0 or 1 error bits on roboRIO v1 or up to 2 on roboRIO v2
     detector.addFamily("tag36h11", 1);
+    // System.out.println(detector.getQuadThresholdParameters());
     
     // Get the UsbCamera from CameraServer
     UsbCamera camera = CameraServer.startAutomaticCapture(); // http://10.42.37.2:1181/   http://roborio-4237-frc.local:1181/?action=stream
@@ -484,10 +485,11 @@ public class Robot extends TimedRobot {
       
       var // transform to camera from robot chassis center at floor level - robot specific!
       cameraInRobotFrame = new Transform3d(       
-           new Translation3d(0., 0., 0.),// camera at center bottom of robot zeros for test data 
-      //      new Rotation3d(0.0, Units.degreesToRadians(0.), Units.degreesToRadians(0.0))); // camera in line with robot chassis
-              // new Translation3d(0.2, 0., 0.8),// camera in front of center of robot and above ground
-              new Rotation3d(0., Units.degreesToRadians(-25.), 0.)); // camera in line with robot chassis, pointing up slightly
+            new Translation3d(0., 0., 0.), // camera at center bottom of robot
+            // new Translation3d(0.2, 0., 0.8), // camera in front of center of robot and above ground
+            // new Rotation3d(0.0, Units.degreesToRadians(0.), Units.degreesToRadians(0.0)) // camera in line with robot chassis
+            new Rotation3d(0., Units.degreesToRadians(-25.), 0.) // camera in line with robot chassis, pointing up slightly
+            );
       // x + roll is camera rolling CCW relative to the robot looking facing the robot
       // y + pitch is camera pointing down relative to the robot. -25 camera points up; +25 points down; sign is correct but backwards of LL
       // z + yaw is camera pointing to the left of robot looking down on it (CCW relative to the robot)
@@ -504,14 +506,14 @@ public class Robot extends TimedRobot {
       Rotation3d rot = robotInFieldFrame.getRotation();
 
       tagsTable
-          .getEntry("pose_" + detection.getId())
+          .getEntry("robotPoseNotAS3D_" + detection.getId())
           .setDoubleArray(
               new double[] {
                 robotInFieldFrame.getX(), robotInFieldFrame.getY(), robotInFieldFrame.getZ(), rot.getX(), rot.getY(), rot.getZ()
               });
 
       tagsTable // display formatted for AdvantageScope Odometry tab
-      .getEntry("pose2D_" + detection.getId())
+      .getEntry("robotPose2D_" + detection.getId())
       .setDoubleArray(
           new double[] {
             robotInFieldFrame.getX(), robotInFieldFrame.getY(), rot.getZ()
@@ -519,7 +521,7 @@ public class Robot extends TimedRobot {
     
       // put out to NetworkTables robot pose for this tag AdvantageScope format
       tagsTable
-      .getEntry("robotpose_" + detection.getId())
+      .getEntry("robotPose3D_" + detection.getId())
       .setDoubleArray(
           new double[] {
                   robotInFieldFrame.getTranslation().getX(),
@@ -533,7 +535,7 @@ public class Robot extends TimedRobot {
     
       // put out to NetworkTables this tag pose AdvantageScope format
       tagsTable
-        .getEntry("tagpose_" + detection.getId())
+        .getEntry("tagPose3D_" + detection.getId())
         .setDoubleArray(
             new double[] {
                     tagInFieldFrame.getTranslation().getX(),
@@ -544,10 +546,18 @@ public class Robot extends TimedRobot {
                     tagInFieldFrame.getRotation().getQuaternion().getY(),
                     tagInFieldFrame.getRotation().getQuaternion().getZ()
             });
+
+      tagsTable // display formatted for AdvantageScope Odometry tab
+      .getEntry("detectionDecisionMargin_" + detection.getId())
+      .setDouble(detection.getDecisionMargin());
+  
     } // end of all detections
 
     long frameEndTime = System.nanoTime();
     latency = (int)(1.e-6*(frameEndTime - acquisitionTime.acquisitionTime)); // ms
+  
+    // put list of tags onto dashboard
+    pubTags.set(tags.stream().mapToLong(Long::longValue).toArray());
 
     // all the data available at this point.
 
@@ -573,9 +583,7 @@ public class Robot extends TimedRobot {
       .35,
       new Scalar(255, 255, 255),
       1);
-  
-    // put list of tags onto dashboard
-    pubTags.set(tags.stream().mapToLong(Long::longValue).toArray());
+
     // Give the output stream a new image to display
     outputStream.putFrame(mat);
   }
