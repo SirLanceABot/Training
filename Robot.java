@@ -136,6 +136,7 @@ public class Robot extends TimedRobot {
     // detector.addFamily("tag16h5", 0); 2023
 
     // look for tag36h11 2024, correct 0 or 1 error bits on roboRIO v1 or up to 2 on roboRIO v2
+    // 3 or more corrections are possible on a computer with a lot of memory such as sim mode on a big computer
     detector.addFamily("tag36h11", 1);
     // System.out.println(detector.getQuadThresholdParameters());
     
